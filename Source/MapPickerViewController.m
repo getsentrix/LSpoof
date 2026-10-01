@@ -783,7 +783,7 @@ static const CGFloat kLSMapHeight = 220.0;
         [self.headingSlider.bottomAnchor constraintEqualToAnchor:self.headingCell.contentView.bottomAnchor constant:-12.0]
     ]];
 
-    // 3: Options (Fluctuation, Radius, Keep Last, Show Real, Floating Button)
+    // 3: Options (Fluctuation, Radius, Keep Last, Show Real, Theme)
     self.fluctuationCell = [self ls_createToggleCellWithBadgeSymbol:@"waveform.path"
                                                          badgeColor:UIColor.systemPurpleColor
                                                               title:@"Location Fluctuation"

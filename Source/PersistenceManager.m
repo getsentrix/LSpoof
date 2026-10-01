@@ -110,20 +110,6 @@ static const NSUInteger kLSMaxRecentLocations = 5;
         self.cachedFluctuationRadius = 50.0;
     }
 
-    if ([self.defaults objectForKey:kKeyFloatingButtonEnabled] != nil) {
-        self.cachedFloatingButtonEnabled = [self.defaults boolForKey:kKeyFloatingButtonEnabled];
-    } else {
-        self.cachedFloatingButtonEnabled = YES;
-    }
-
-    if ([self.defaults objectForKey:kKeyFloatingButtonX] != nil &&
-        [self.defaults objectForKey:kKeyFloatingButtonY] != nil) {
-        self.cachedFloatingButtonPosition = CGPointMake([self.defaults doubleForKey:kKeyFloatingButtonX],
-                                                        [self.defaults doubleForKey:kKeyFloatingButtonY]);
-    } else {
-        self.cachedFloatingButtonPosition = CGPointMake(74.0, 56.0);
-    }
-
     if ([self.defaults objectForKey:kKeyLatitude] != nil &&
         [self.defaults objectForKey:kKeyLongitude] != nil) {
         CLLocationDegrees latitude = [self.defaults doubleForKey:kKeyLatitude];
