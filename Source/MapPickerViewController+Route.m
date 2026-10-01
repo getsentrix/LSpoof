@@ -45,7 +45,7 @@
     // Custom speed text field
     self.customSpeedField = [[UITextField alloc] init];
     self.customSpeedField.translatesAutoresizingMaskIntoConstraints = NO;
-    self.customSpeedField.placeholder = @"e.g. 30 km/h";
+    self.customSpeedField.placeholder = @"e.g. 25";
     self.customSpeedField.keyboardType = UIKeyboardTypeDecimalPad;
     self.customSpeedField.text = @"30 km/h";
     self.customSpeedField.textAlignment = NSTextAlignmentRight;
@@ -53,6 +53,14 @@
     self.customSpeedField.textColor = UIColor.labelColor;
     self.customSpeedField.delegate = self;
     [self.customSpeedField addTarget:self action:@selector(textFieldDidChange:) forControlEvents:UIControlEventEditingChanged];
+
+    UIToolbar *speedToolbar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 0, 320, 44)];
+    speedToolbar.items = @[
+        [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil],
+        [[UIBarButtonItem alloc] initWithTitle:@"Done" style:UIBarButtonItemStyleDone target:self action:@selector(dismissCustomSpeedKeyboard)]
+    ];
+    [speedToolbar sizeToFit];
+    self.customSpeedField.inputAccessoryView = speedToolbar;
 
     // Play Route Button
     self.playRouteButton = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -127,17 +135,36 @@
     self.routeStartSubLabel.text = @"Tap map to set start position";
     [self.routeStartCell.contentView addSubview:self.routeStartSubLabel];
 
+    self.snapStartButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.snapStartButton.translatesAutoresizingMaskIntoConstraints = NO;
+    UIImageSymbolConfiguration *reticleConfig = [UIImageSymbolConfiguration configurationWithPointSize:16.0 weight:UIFontWeightSemibold];
+    UIImage *reticleImg = [UIImage systemImageNamed:@"location.fill.viewfinder" withConfiguration:reticleConfig];
+    if (!reticleImg) reticleImg = [UIImage systemImageNamed:@"location.circle.fill" withConfiguration:reticleConfig];
+    [self.snapStartButton setImage:reticleImg forState:UIControlStateNormal];
+    self.snapStartButton.tintColor = UIColor.systemGreenColor;
+    self.snapStartButton.backgroundColor = [UIColor.systemGreenColor colorWithAlphaComponent:0.12];
+    self.snapStartButton.layer.cornerRadius = 16.0;
+    self.snapStartButton.layer.cornerCurve = kCACornerCurveContinuous;
+    [self.snapStartButton addTarget:self action:@selector(handleSnapStartToCurrentLocation) forControlEvents:UIControlEventTouchUpInside];
+    [self.routeStartCell.contentView addSubview:self.snapStartButton];
+
     [NSLayoutConstraint activateConstraints:@[
         [startBadge.leadingAnchor constraintEqualToAnchor:self.routeStartCell.contentView.leadingAnchor constant:16.0],
         [startBadge.centerYAnchor constraintEqualToAnchor:self.routeStartCell.contentView.centerYAnchor],
 
         [startTitle.leadingAnchor constraintEqualToAnchor:startBadge.trailingAnchor constant:12.0],
         [startTitle.topAnchor constraintEqualToAnchor:self.routeStartCell.contentView.topAnchor constant:12.0],
+        [startTitle.trailingAnchor constraintLessThanOrEqualToAnchor:self.snapStartButton.leadingAnchor constant:-8.0],
 
         [self.routeStartSubLabel.leadingAnchor constraintEqualToAnchor:startTitle.leadingAnchor],
         [self.routeStartSubLabel.topAnchor constraintEqualToAnchor:startTitle.bottomAnchor constant:4.0],
         [self.routeStartSubLabel.bottomAnchor constraintEqualToAnchor:self.routeStartCell.contentView.bottomAnchor constant:-12.0],
-        [self.routeStartSubLabel.trailingAnchor constraintEqualToAnchor:self.routeStartCell.contentView.trailingAnchor constant:-16.0]
+        [self.routeStartSubLabel.trailingAnchor constraintEqualToAnchor:self.snapStartButton.leadingAnchor constant:-8.0],
+
+        [self.snapStartButton.trailingAnchor constraintEqualToAnchor:self.routeStartCell.contentView.trailingAnchor constant:-16.0],
+        [self.snapStartButton.centerYAnchor constraintEqualToAnchor:self.routeStartCell.contentView.centerYAnchor],
+        [self.snapStartButton.widthAnchor constraintEqualToConstant:34.0],
+        [self.snapStartButton.heightAnchor constraintEqualToConstant:34.0]
     ]];
 
     // Dest cell
@@ -452,14 +479,66 @@
 - (void)handleTransportModeChanged:(UISegmentedControl *)sender {
     (void)sender;
     LSRouteSimulator *simulator = [LSRouteSimulator shared];
-    if (simulator.isSimulating) {
-        simulator.transportMode = [self ls_selectedTransportMode];
-        if (simulator.transportMode == LSTransportModeCustom) {
-            NSNumber *parsed = [self ls_parsedCoordinateComponentFromText:self.customSpeedField.text];
-            simulator.customSpeedKmh = parsed ? parsed.doubleValue : 30.0;
-        }
+    simulator.transportMode = [self ls_selectedTransportMode];
+    if (simulator.transportMode == LSTransportModeCustom) {
+        NSNumber *parsed = [self ls_parsedCoordinateComponentFromText:self.customSpeedField.text];
+        simulator.customSpeedKmh = parsed ? parsed.doubleValue : 30.0;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.customSpeedField becomeFirstResponder];
+        });
+    } else {
+        [self.customSpeedField resignFirstResponder];
     }
     [self.tableView reloadData];
+}
+
+- (void)dismissCustomSpeedKeyboard {
+    [self.customSpeedField resignFirstResponder];
+    NSNumber *parsed = [self ls_parsedCoordinateComponentFromText:self.customSpeedField.text];
+    double speedVal = parsed ? parsed.doubleValue : 30.0;
+    if (speedVal < 1.0) speedVal = 1.0;
+    if (speedVal > 300.0) speedVal = 300.0;
+    self.customSpeedField.text = [NSString stringWithFormat:@"%.1f km/h", speedVal];
+    [LSRouteSimulator shared].customSpeedKmh = speedVal;
+}
+
+- (void)handleSnapStartToCurrentLocation {
+    CLLocationCoordinate2D snapCoordinate = kCLLocationCoordinate2DInvalid;
+    if ([[PersistenceManager shared] isSpoofingEnabled] && [[PersistenceManager shared] hasStoredCoordinate]) {
+        snapCoordinate = [[PersistenceManager shared] spoofCoordinate];
+    } else if (self.pinAnnotation && CLLocationCoordinate2DIsValid(self.pinAnnotation.coordinate)) {
+        snapCoordinate = self.pinAnnotation.coordinate;
+    } else if ([PersistenceManager shared].hasRealCoordinate) {
+        snapCoordinate = [PersistenceManager shared].lastRealCoordinate;
+    } else if (self.mapView.userLocation && CLLocationCoordinate2DIsValid(self.mapView.userLocation.coordinate) &&
+               fabs(self.mapView.userLocation.coordinate.latitude) > 0.0001) {
+        snapCoordinate = self.mapView.userLocation.coordinate;
+    }
+
+    if (!CLLocationCoordinate2DIsValid(snapCoordinate)) {
+        [self playRouteFailureHaptic];
+        return;
+    }
+
+    if (!self.startAnnotation) {
+        self.startAnnotation = [[LSStartAnnotation alloc] init];
+        self.startAnnotation.title = @"Start";
+        [self.mapView addAnnotation:self.startAnnotation];
+    }
+    self.startAnnotation.coordinate = snapCoordinate;
+    self.routePlacementPhase = self.destinationAnnotation ? LSRoutePlacementPhaseStart : LSRoutePlacementPhaseDestination;
+    self.mapHintLabel.text = self.destinationAnnotation ? @"  Tap Get Route Directions  " : @"  Tap map for destination  ";
+
+    [self ls_updateRouteWaypointLabels];
+
+    UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [feedback impactOccurred];
+
+    if (self.destinationAnnotation && CLLocationCoordinate2DIsValid(self.destinationAnnotation.coordinate)) {
+        [self handleGetDirectionsTapped];
+    } else {
+        [self.mapView setCenterCoordinate:snapCoordinate animated:YES];
+    }
 }
 
 - (void)handlePlayRouteTapped {
@@ -714,6 +793,14 @@
 #pragma mark - Map Overlay & Annotation Views
 
 - (MKOverlayRenderer *)ls_rendererForMapOverlay:(id<MKOverlay>)overlay {
+    if (overlay == self.driftCircleOverlay) {
+        MKCircleRenderer *renderer = [[MKCircleRenderer alloc] initWithCircle:(MKCircle *)overlay];
+        renderer.fillColor = [UIColor.systemPurpleColor colorWithAlphaComponent:0.18];
+        renderer.strokeColor = [UIColor.systemPurpleColor colorWithAlphaComponent:0.65];
+        renderer.lineWidth = 1.5;
+        renderer.lineDashPattern = @[@4, @4];
+        return renderer;
+    }
     if (overlay == self.routePolyline) {
         MKPolylineRenderer *renderer = [[MKPolylineRenderer alloc] initWithPolyline:(MKPolyline *)overlay];
         renderer.strokeColor = UIColor.systemBlueColor;

@@ -22,12 +22,12 @@
 
 ---
 
-## ⚡ What's New in v1.1.9
+## ⚡ What's New in v1.2.0
 
-- **Flush Native Top Bar Button**: Sized and styled identically to Life360's native buttons (40x40 circle, borderless, soft shadow, exact `#8652FF` Life360 purple).
-- **Symmetrical Alignment**: Perfectly centered in the gap between the Circle Name pill and the Inbox button with zero overlap.
-- **Splash Screen Guard**: Completely hides the button during splash screen, login, loading, and modals; only appears when the main map dashboard is actively rendered.
-- **Seamless Dark Mode**: Automatically adapts between pure white and native iOS dark mode (`#2C2C2E`).
+- **Drift Radius Visualization**: Real-time semi-transparent dashed purple circle overlay (`MKCircleRenderer`) renders around the pin matching the fluctuation slider value.
+- **3-Way Theme Synchronization**: Replaced binary switch with a native Inset Grouped `System` / `Light` / `Dark` segmented control mapped to `LSAppearancePreference`.
+- **Route Start Snapping**: Added `"location.fill.viewfinder"` reticle button on the Start Point cell to instantly anchor routes to current spoof or real GPS coordinates.
+- **Granular Numeric Speed Input**: Upgraded Custom transport speed option with `UIKeyboardTypeDecimalPad`, Done toolbar accessory, and automatic keyboard focus.
 
 ---
 

@@ -72,6 +72,10 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UISwitch *showRealLocationSwitch;
 @property (nonatomic, strong) UISwitch *darkModeSwitch;
 @property (nonatomic, strong) UITableViewCell *darkModeCell;
+@property (nonatomic, strong) UISegmentedControl *themeSegmentedControl;
+@property (nonatomic, strong) UITableViewCell *themeSelectionCell;
+@property (nonatomic, strong, nullable) MKCircle *driftCircleOverlay;
+@property (nonatomic, strong) UIButton *snapStartButton;
 @property (nonatomic, strong) NSLayoutConstraint *mapHeightConstraint;
 
 @property (nonatomic, strong) UITextField *latitudeField;
@@ -173,6 +177,10 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 - (void)handleFluctuationRadiusSliderChanged:(UISlider *)sender;
 - (void)handleCheckForUpdatesTapped;
 - (void)handleDarkModeToggled:(UISwitch *)sender;
+- (void)handleThemeChanged:(UISegmentedControl *)sender;
+- (void)updateDriftRadiusOverlay;
+- (void)handleSnapStartToCurrentLocation;
+- (void)dismissCustomSpeedKeyboard;
 - (void)ls_updateTableHeaderLayout;
 
 @end

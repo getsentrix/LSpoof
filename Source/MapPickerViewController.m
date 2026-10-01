@@ -77,7 +77,11 @@ static const CGFloat kLSMapHeight = 220.0;
     self.fluctuationRadiusLabel.text = [NSString stringWithFormat:@"%.0f m", store.fluctuationRadius];
     self.keepLastSpoofSwitch.on = store.keepLastSpoof;
     self.showRealLocationSwitch.on = store.showRealLocation;
+    LSAppearancePreference pref = store.appearancePreference;
+    self.themeSegmentedControl.selectedSegmentIndex = (pref == LSAppearancePreferenceLight) ? 1 : ((pref == LSAppearancePreferenceDark) ? 2 : 0);
+    self.darkModeSwitch.on = store.isEffectiveDarkMode;
     [self updateHeroStatusCell];
+    [self updateDriftRadiusOverlay];
 
 
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(ls_keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
@@ -836,15 +840,55 @@ static const CGFloat kLSMapHeight = 220.0;
                                                                 subtitle:@"Display native GPS blue dot on map"
                                                                  control:self.showRealLocationSwitch];
 
+    // 3-way Theme Selection (System / Light / Dark)
+    self.themeSegmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"System", @"Light", @"Dark"]];
+    self.themeSegmentedControl.translatesAutoresizingMaskIntoConstraints = NO;
+    LSAppearancePreference initialPref = [[PersistenceManager shared] appearancePreference];
+    if (initialPref == LSAppearancePreferenceLight) {
+        self.themeSegmentedControl.selectedSegmentIndex = 1;
+    } else if (initialPref == LSAppearancePreferenceDark) {
+        self.themeSegmentedControl.selectedSegmentIndex = 2;
+    } else {
+        self.themeSegmentedControl.selectedSegmentIndex = 0;
+    }
+    [self.themeSegmentedControl addTarget:self action:@selector(handleThemeChanged:) forControlEvents:UIControlEventValueChanged];
+
+    self.themeSelectionCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    self.themeSelectionCell.backgroundColor = [MapPickerViewController liquidGlassCellBackgroundColor];
+    self.themeSelectionCell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    UIView *themeBadge = [MapPickerViewController iconBadgeWithSymbolName:@"circle.righthalf.filled" backgroundColor:UIColor.systemIndigoColor];
+    [self.themeSelectionCell.contentView addSubview:themeBadge];
+
+    UILabel *themeTitle = [[UILabel alloc] init];
+    themeTitle.translatesAutoresizingMaskIntoConstraints = NO;
+    themeTitle.text = @"Appearance";
+    themeTitle.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
+    themeTitle.textColor = UIColor.labelColor;
+    [self.themeSelectionCell.contentView addSubview:themeTitle];
+
+    [self.themeSelectionCell.contentView addSubview:self.themeSegmentedControl];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [themeBadge.leadingAnchor constraintEqualToAnchor:self.themeSelectionCell.contentView.leadingAnchor constant:16.0],
+        [themeBadge.centerYAnchor constraintEqualToAnchor:self.themeSelectionCell.contentView.centerYAnchor],
+
+        [themeTitle.leadingAnchor constraintEqualToAnchor:themeBadge.trailingAnchor constant:12.0],
+        [themeTitle.centerYAnchor constraintEqualToAnchor:self.themeSelectionCell.contentView.centerYAnchor],
+        [themeTitle.trailingAnchor constraintLessThanOrEqualToAnchor:self.themeSegmentedControl.leadingAnchor constant:-8.0],
+
+        [self.themeSegmentedControl.trailingAnchor constraintEqualToAnchor:self.themeSelectionCell.contentView.trailingAnchor constant:-16.0],
+        [self.themeSegmentedControl.centerYAnchor constraintEqualToAnchor:self.themeSelectionCell.contentView.centerYAnchor],
+        [self.themeSegmentedControl.widthAnchor constraintEqualToConstant:190.0],
+        [self.themeSegmentedControl.heightAnchor constraintEqualToConstant:32.0],
+
+        [self.themeSelectionCell.contentView.heightAnchor constraintGreaterThanOrEqualToConstant:52.0]
+    ]];
+
     self.darkModeSwitch = [[UISwitch alloc] init];
     self.darkModeSwitch.on = [[PersistenceManager shared] isEffectiveDarkMode];
     [self.darkModeSwitch addTarget:self action:@selector(handleDarkModeToggled:) forControlEvents:UIControlEventValueChanged];
-
-    self.darkModeCell = [self ls_createToggleCellWithBadgeSymbol:@"moon.fill"
-                                                      badgeColor:UIColor.systemIndigoColor
-                                                           title:@"Dark Mode"
-                                                        subtitle:@"Always use dark interface theme"
-                                                         control:self.darkModeSwitch];
+    self.darkModeCell = self.themeSelectionCell;
 
     self.floatingButtonSwitch = [[UISwitch alloc] init];
     self.floatingButtonSwitch.on = [[PersistenceManager shared] floatingButtonEnabled];
@@ -1060,6 +1104,7 @@ static const CGFloat kLSMapHeight = 220.0;
         MKCoordinateRegion region = MKCoordinateRegionMakeWithDistance(self.selectedCoordinate, 1500.0, 1500.0);
         [self.mapView setRegion:region animated:animated];
     }
+    [self updateDriftRadiusOverlay];
 }
 
 #pragma mark - Validation & Input
@@ -1206,12 +1251,37 @@ static const CGFloat kLSMapHeight = 220.0;
     } completion:^(BOOL finished) {
         (void)finished;
         weakSelf.fluctuationSwitch.userInteractionEnabled = YES;
+        [weakSelf updateDriftRadiusOverlay];
     }];
+    [self updateDriftRadiusOverlay];
 }
 
 - (void)handleFluctuationRadiusSliderChanged:(UISlider *)sender {
     double radius = round(sender.value);
     self.fluctuationRadiusLabel.text = [NSString stringWithFormat:@"%.0f m", radius];
+    [self updateDriftRadiusOverlay];
+}
+
+- (void)updateDriftRadiusOverlay {
+    if (self.driftCircleOverlay) {
+        [self.mapView removeOverlay:self.driftCircleOverlay];
+        self.driftCircleOverlay = nil;
+    }
+
+    if (!self.pinAnnotation) {
+        return;
+    }
+
+    BOOL shouldShow = self.fluctuationSwitch.isOn || self.fluctuationRadiusSlider.isTracking;
+    if (!shouldShow) {
+        return;
+    }
+
+    double radius = round(self.fluctuationRadiusSlider.value);
+    if (radius <= 0) radius = 5.0;
+
+    self.driftCircleOverlay = [MKCircle circleWithCenterCoordinate:self.pinAnnotation.coordinate radius:radius];
+    [self.mapView addOverlay:self.driftCircleOverlay level:MKOverlayLevelAboveRoads];
 }
 
 - (void)handleCheckForUpdatesTapped {
@@ -1261,6 +1331,27 @@ static const CGFloat kLSMapHeight = 220.0;
 - (void)handleDarkModeToggled:(UISwitch *)sender {
     [PersistenceManager shared].appearancePreference = sender.isOn ? LSAppearancePreferenceDark : LSAppearancePreferenceLight;
     self.overrideUserInterfaceStyle = sender.isOn ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
+}
+
+- (void)handleThemeChanged:(UISegmentedControl *)sender {
+    LSAppearancePreference pref = LSAppearancePreferenceSystem;
+    if (sender.selectedSegmentIndex == 1) {
+        pref = LSAppearancePreferenceLight;
+    } else if (sender.selectedSegmentIndex == 2) {
+        pref = LSAppearancePreferenceDark;
+    }
+    [PersistenceManager shared].appearancePreference = pref;
+    if (@available(iOS 13.0, *)) {
+        if (pref == LSAppearancePreferenceDark) {
+            self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+        } else if (pref == LSAppearancePreferenceLight) {
+            self.overrideUserInterfaceStyle = UIUserInterfaceStyleLight;
+        } else {
+            self.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
+        }
+    }
+    UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+    [feedback impactOccurred];
 }
 
 - (void)handleFloatingButtonToggled:(UISwitch *)sender {
@@ -1633,10 +1724,15 @@ static const CGFloat kLSMapHeight = 220.0;
     store.fluctuationEnabled = self.fluctuationSwitch.isOn;
     store.fluctuationRadius = round(self.fluctuationRadiusSlider.value);
     store.keepLastSpoof = self.keepLastSpoofSwitch.isOn;
-    store.showRealLocation = self.showRealLocationSwitch.isOn;
-    store.appearancePreference = self.darkModeSwitch.isOn ? LSAppearancePreferenceDark : LSAppearancePreferenceLight;
+    if (self.themeSegmentedControl) {
+        NSInteger idx = self.themeSegmentedControl.selectedSegmentIndex;
+        store.appearancePreference = (idx == 1) ? LSAppearancePreferenceLight : ((idx == 2) ? LSAppearancePreferenceDark : LSAppearancePreferenceSystem);
+    } else {
+        store.appearancePreference = self.darkModeSwitch.isOn ? LSAppearancePreferenceDark : LSAppearancePreferenceLight;
+    }
     store.floatingButtonEnabled = self.floatingButtonSwitch.isOn;
     [LSOverlayManager setFloatingButtonHidden:!self.floatingButtonSwitch.isOn];
+    [self updateDriftRadiusOverlay];
 
     [self playApplyHaptic];
     [self updateHeroStatusCell];
@@ -1713,6 +1809,14 @@ static const CGFloat kLSMapHeight = 220.0;
 
 - (MKOverlayRenderer *)mapView:(MKMapView *)mapView rendererForOverlay:(id<MKOverlay>)overlay {
     (void)mapView;
+    if (overlay == self.driftCircleOverlay) {
+        MKCircleRenderer *renderer = [[MKCircleRenderer alloc] initWithCircle:(MKCircle *)overlay];
+        renderer.fillColor = [UIColor.systemPurpleColor colorWithAlphaComponent:0.18];
+        renderer.strokeColor = [UIColor.systemPurpleColor colorWithAlphaComponent:0.65];
+        renderer.lineWidth = 1.5;
+        renderer.lineDashPattern = @[@4, @4];
+        return renderer;
+    }
     return [self ls_rendererForMapOverlay:overlay];
 }
 
@@ -1901,12 +2005,12 @@ static const CGFloat kLSMapHeight = 220.0;
                 if (indexPath.row == 1) return self.fluctuationRadiusCell;
                 if (indexPath.row == 2) return self.keepLastSpoofCell;
                 if (indexPath.row == 3) return self.showRealLocationCell;
-                if (indexPath.row == 4) return self.darkModeCell;
+                if (indexPath.row == 4) return self.themeSelectionCell;
                 return self.floatingButtonCell;
             } else {
                 if (indexPath.row == 1) return self.keepLastSpoofCell;
                 if (indexPath.row == 2) return self.showRealLocationCell;
-                if (indexPath.row == 3) return self.darkModeCell;
+                if (indexPath.row == 3) return self.themeSelectionCell;
                 return self.floatingButtonCell;
             }
         }
