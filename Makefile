@@ -18,7 +18,7 @@ LocationSpoofer_FILES = \
 	Source/PersistenceManager.m
 
 LocationSpoofer_CFLAGS = -fobjc-arc -Wall -Wextra -ISource
-LocationSpoofer_FRAMEWORKS = Foundation UIKit CoreLocation MapKit
+LocationSpoofer_FRAMEWORKS = Foundation UIKit CoreLocation MapKit CoreGraphics QuartzCore
 LocationSpoofer_LDFLAGS = -install_name @executable_path/Frameworks/LocationSpoofer.dylib
 
 include $(THEOS)/makefiles/library.mk

@@ -44,6 +44,8 @@ jobs:
             -framework UIKit \
             -framework CoreLocation \
             -framework MapKit \
+            -framework CoreGraphics \
+            -framework QuartzCore \
             -install_name @executable_path/Frameworks/LocationSpoofer.dylib \
             -o LocationSpoofer.dylib
           ls -lh LocationSpoofer.dylib
