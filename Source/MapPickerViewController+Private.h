@@ -179,8 +179,6 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 - (void)handleDarkModeToggled:(UISwitch *)sender;
 - (void)handleThemeChanged:(UISegmentedControl *)sender;
 - (void)updateDriftRadiusOverlay;
-- (void)handleSnapStartToCurrentLocation;
-- (void)dismissCustomSpeedKeyboard;
 - (void)ls_updateTableHeaderLayout;
 
 @end
@@ -189,6 +187,9 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @interface MapPickerViewController (LSRouteUI) <LSRouteSimulatorDelegate>
 
 - (void)buildRouteControls;
+- (void)handleGetRouteTapped;
+- (void)handleSnapStartToCurrentLocation;
+- (void)dismissCustomSpeedKeyboard;
 - (void)ls_handleRouteMapTap:(CLLocationCoordinate2D)coordinate;
 - (void)updateCoordinateModeVisibility;
 - (void)restoreSimulationUIIfNeeded;

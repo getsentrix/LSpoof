@@ -535,7 +535,7 @@
     [feedback impactOccurred];
 
     if (self.destinationAnnotation && CLLocationCoordinate2DIsValid(self.destinationAnnotation.coordinate)) {
-        [self handleGetDirectionsTapped];
+        [self handleGetRouteTapped];
     } else {
         [self.mapView setCenterCoordinate:snapCoordinate animated:YES];
     }
