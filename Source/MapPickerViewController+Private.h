@@ -26,7 +26,7 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @interface LSDestinationAnnotation : MKPointAnnotation
 @end
 
-@interface MapPickerViewController () <UIGestureRecognizerDelegate>
+@interface MapPickerViewController () <UIGestureRecognizerDelegate, UITextFieldDelegate>
 
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) UIView *tableHeaderContainer;

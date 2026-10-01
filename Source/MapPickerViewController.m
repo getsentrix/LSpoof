@@ -240,7 +240,7 @@ static const CGFloat kLSMapHeight = 220.0;
     self.statusStackView.axis = UILayoutConstraintAxisHorizontal;
     self.statusStackView.alignment = UIStackViewAlignmentCenter;
     self.statusStackView.spacing = 6.0;
-    self.statusStackView.isLayoutMarginsRelativeArrangement = YES;
+    self.statusStackView.layoutMarginsRelativeArrangement = YES;
     self.statusStackView.layoutMargins = UIEdgeInsetsMake(6.0, 10.0, 6.0, 12.0);
     [self.statusPill addSubview:self.statusStackView];
 
