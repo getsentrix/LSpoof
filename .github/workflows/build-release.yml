@@ -1,0 +1,109 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (e.g. v1.1.0)'
+        required: false
+        default: 'v1.1.0'
+      release_title:
+        description: 'Release Title'
+        required: false
+        default: 'v1.1.0 - Modern Inset Grouped UI & Apple SF Symbols'
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Xcode & SDK info
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+
+      - name: Compile LocationSpoofer.dylib
+        run: |
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "Compiling with iPhoneOS SDK at $SDK_PATH"
+          xcrun --sdk iphoneos clang -target arm64-apple-ios16.0 \
+            -dynamiclib \
+            -fobjc-arc \
+            -Wall -Wextra \
+            -ISource \
+            Source/dylib_init.m \
+            Source/LSHooking.m \
+            Source/LocationSpoofer.m \
+            Source/RouteSimulator.m \
+            Source/BookmarksManager.m \
+            Source/OverlayWindow.m \
+            Source/MapPickerViewController.m \
+            Source/MapPickerViewController+Route.m \
+            Source/MapPickerViewController+Bookmarks.m \
+            Source/PersistenceManager.m \
+            -framework Foundation \
+            -framework UIKit \
+            -framework CoreLocation \
+            -framework MapKit \
+            -install_name @executable_path/Frameworks/LocationSpoofer.dylib \
+            -o LocationSpoofer.dylib
+
+          ls -lh LocationSpoofer.dylib
+          file LocationSpoofer.dylib
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocationSpoofer.dylib
+          path: LocationSpoofer.dylib
+
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.tag_name }}"
+          if [ -z "$TAG" ]; then
+            if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+              TAG="${GITHUB_REF#refs/tags/}"
+            else
+              TAG="v1.1.0"
+            fi
+          fi
+
+          TITLE="${{ github.event.inputs.release_title }}"
+          if [ -z "$TITLE" ]; then
+            TITLE="$TAG - Modern Inset Grouped UI & Apple SF Symbols"
+          fi
+
+          NOTES="## $TITLE
+
+### What's New
+- **Modern Inset Grouped UI Layout**: Replaced older sharp box margins with native iOS rounded inset grouped cards (\`UITableViewStyleInsetGrouped\`).
+- **Apple SF Symbols**: Added native Apple system icon badges next to coordinate inputs (Latitude, Longitude, Altitude), heading bearing, and toggle switches (Location Fluctuation, Keep Last Location, Show Real Location).
+- **Glitch-Free Interface**: Redesigned UI hierarchy to eliminate nested scroll view conflicts, floating search suggestions that no longer push layout, and buttery-smooth toggle animations.
+- **Dark Mode Polish**: Native iOS dynamic semantic colors, monospaced digit formatting, clear placeholders, and consistent 16pt insets matching iOS HIG standards.
+
+### Assets
+- \`LocationSpoofer.dylib\`: Sideloadable arm64 Mach-O dynamic library for iOS 16.0+"
+
+          # Create release or upload clobbering if exists
+          gh release view "$TAG" --repo getsentrix/LSpoof >/dev/null 2>&1 && {
+            echo "Release $TAG already exists, uploading asset..."
+            gh release upload "$TAG" LocationSpoofer.dylib --repo getsentrix/LSpoof --clobber
+          } || {
+            echo "Creating release $TAG..."
+            gh release create "$TAG" LocationSpoofer.dylib \
+              --repo getsentrix/LSpoof \
+              --title "$TITLE" \
+              --notes "$NOTES"
+          }

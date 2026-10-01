@@ -13,55 +13,24 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
 @implementation MapPickerViewController (LSBookmarksUI)
 
 - (void)buildBookmarksPanel {
-    self.bookmarksContainer = [[UIView alloc] init];
-    self.bookmarksContainer.translatesAutoresizingMaskIntoConstraints = NO;
-    self.bookmarksContainer.hidden = YES;
-    [self.controlPanel.contentView addSubview:self.bookmarksContainer];
-
-    self.bookmarksTableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStyleInsetGrouped];
-    self.bookmarksTableView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.bookmarksTableView.dataSource = (id<UITableViewDataSource>)self;
-    self.bookmarksTableView.delegate = (id<UITableViewDelegate>)self;
-    self.bookmarksTableView.backgroundColor = UIColor.clearColor;
-    self.bookmarksTableView.keyboardDismissMode = UIScrollViewKeyboardDismissModeOnDrag;
-    [self.bookmarksTableView registerClass:[UITableViewCell class] forCellReuseIdentifier:kLSBookmarksCell];
-    [self.bookmarksContainer addSubview:self.bookmarksTableView];
-
-    UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(ls_handleBookmarksLongPress:)];
-    [self.bookmarksTableView addGestureRecognizer:longPress];
-
-    [NSLayoutConstraint activateConstraints:@[
-        [self.bookmarksTableView.topAnchor constraintEqualToAnchor:self.bookmarksContainer.topAnchor],
-        [self.bookmarksTableView.leadingAnchor constraintEqualToAnchor:self.bookmarksContainer.leadingAnchor],
-        [self.bookmarksTableView.trailingAnchor constraintEqualToAnchor:self.bookmarksContainer.trailingAnchor],
-        [self.bookmarksTableView.bottomAnchor constraintEqualToAnchor:self.bookmarksContainer.bottomAnchor]
-    ]];
+    [self.tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:kLSBookmarksCell];
 }
 
 - (void)updatePanelTabVisibility {
-    BOOL mapTab = self.panelTab == LSMapPickerPanelTabMap;
+    BOOL mapTab = (self.panelTab == LSMapPickerPanelTabMap);
 
-    CGFloat duration = 0.2;
-    self.mapControlsContainer.hidden = NO;
-    self.bookmarksContainer.hidden = NO;
+    self.coordinateModeSegment.hidden = !mapTab;
+    self.searchBar.hidden = !mapTab;
 
-    [UIView animateWithDuration:duration animations:^{
-        self.mapControlsContainer.alpha = mapTab ? 1.0 : 0.0;
-        self.bookmarksContainer.alpha = mapTab ? 0.0 : 1.0;
-        self.coordinateModeSegment.alpha = mapTab ? 1.0 : 0.0;
-        self.searchBar.alpha = mapTab ? 1.0 : 0.0;
-    } completion:^(BOOL finished) {
-        (void)finished;
-        self.mapControlsContainer.hidden = !mapTab;
-        self.bookmarksContainer.hidden = mapTab;
-        self.coordinateModeSegment.hidden = !mapTab;
-        self.searchBar.hidden = !mapTab;
-    }];
+    [self.tableHeaderContainer layoutIfNeeded];
+    CGFloat headerHeight = [self.tableHeaderContainer systemLayoutSizeFittingSize:UILayoutFittingCompressedSize].height;
+    self.tableHeaderContainer.frame = CGRectMake(0, 0, self.view.bounds.size.width, headerHeight);
+    self.tableView.tableHeaderView = self.tableHeaderContainer;
 
-    if (!mapTab) {
-        [self.bookmarksTableView reloadData];
-    } else {
+    if (mapTab) {
         [self updateCoordinateModeVisibility];
+    } else {
+        [self.tableView reloadData];
     }
 }
 
@@ -83,27 +52,27 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     NSString *suggested = name.length > 0 ? name : @"Location";
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Save Bookmark"
-                                                                    message:nil
-                                                             preferredStyle:UIAlertControllerStyleAlert];
+                                                                   message:nil
+                                                            preferredStyle:UIAlertControllerStyleAlert];
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
         textField.text = suggested;
         textField.placeholder = @"Name";
+        textField.clearButtonMode = UITextFieldViewModeWhileEditing;
     }];
 
     __weak typeof(self) weakSelf = self;
     [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+    [alert addAction:[UIAlertAction actionWithTitle:@"Save" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
         typeof(self) strongSelf = weakSelf;
-        if (!strongSelf) {
-            return;
-        }
+        if (!strongSelf) return;
+
         NSString *bookmarkName = alert.textFields.firstObject.text;
         if (bookmarkName.length == 0) {
             bookmarkName = @"Location";
         }
         [[BookmarksManager shared] addBookmarkWithName:bookmarkName coordinate:coordinate];
         [strongSelf playBookmarkSavedHaptic];
-        [strongSelf.bookmarksTableView reloadData];
+        [strongSelf.tableView reloadData];
     }]];
     [self presentViewController:alert animated:YES completion:nil];
 
@@ -124,10 +93,6 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     }
 }
 
-- (BOOL)ls_isBookmarksTableView:(UITableView *)tableView {
-    return tableView == self.bookmarksTableView;
-}
-
 - (NSInteger)ls_bookmarksNumberOfSections {
     return 2;
 }
@@ -139,15 +104,51 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     return (NSInteger)[BookmarksManager shared].allBookmarks.count;
 }
 
-- (NSString *)ls_bookmarksTitleForHeaderInSection:(NSInteger)section {
+- (nullable NSString *)ls_bookmarksTitleForHeaderInSection:(NSInteger)section {
     if (section == LSBookmarksSectionRecents) {
         return @"Recents";
     }
-    return @"Bookmarks";
+    return @"Saved Bookmarks";
+}
+
+- (nullable UIView *)ls_bookmarksHeaderForSection:(NSInteger)section {
+    if (section != LSBookmarksSectionSaved) {
+        return nil;
+    }
+
+    UIView *header = [[UIView alloc] init];
+    header.backgroundColor = UIColor.clearColor;
+
+    UILabel *title = [[UILabel alloc] init];
+    title.translatesAutoresizingMaskIntoConstraints = NO;
+    title.text = @"Saved Bookmarks";
+    title.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightSemibold];
+    title.textColor = UIColor.secondaryLabelColor;
+    [header addSubview:title];
+
+    UIButton *editButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    editButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [editButton setTitle:self.bookmarksEditMode ? @"Done" : @"Edit" forState:UIControlStateNormal];
+    editButton.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightSemibold];
+    [editButton addTarget:self action:@selector(ls_toggleBookmarksEditMode) forControlEvents:UIControlEventTouchUpInside];
+    [header addSubview:editButton];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [title.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:20.0],
+        [title.centerYAnchor constraintEqualToAnchor:header.centerYAnchor],
+        [editButton.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-20.0],
+        [editButton.centerYAnchor constraintEqualToAnchor:header.centerYAnchor],
+        [header.heightAnchor constraintEqualToConstant:32.0]
+    ]];
+    return header;
 }
 
 - (UITableViewCell *)ls_bookmarksCellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    UITableViewCell *cell = [self.bookmarksTableView dequeueReusableCellWithIdentifier:kLSBookmarksCell forIndexPath:indexPath];
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:kLSBookmarksCell];
+    if (!cell) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:kLSBookmarksCell];
+    }
+    cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
 
     CLLocationCoordinate2D coordinate = kCLLocationCoordinate2DInvalid;
     NSString *title = @"Location";
@@ -159,6 +160,19 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
             coordinate = CLLocationCoordinate2DMake([entry[@"LSRecentLat"] doubleValue], [entry[@"LSRecentLon"] doubleValue]);
             title = entry[@"LSRecentName"] ?: @"Location";
         }
+
+        UIListContentConfiguration *content = [UIListContentConfiguration subtitleCellConfiguration];
+        content.text = title;
+        content.textProperties.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
+        content.textProperties.color = UIColor.labelColor;
+        if (CLLocationCoordinate2DIsValid(coordinate)) {
+            content.secondaryText = [NSString stringWithFormat:@"%.5f, %.5f", coordinate.latitude, coordinate.longitude];
+        }
+        content.secondaryTextProperties.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
+        content.secondaryTextProperties.color = UIColor.secondaryLabelColor;
+        content.image = [UIImage systemImageNamed:@"clock.fill"];
+        content.imageProperties.tintColor = UIColor.systemBlueColor;
+        cell.contentConfiguration = content;
         cell.accessoryView = nil;
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     } else {
@@ -169,25 +183,33 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
             title = bookmark.name;
         }
 
-        UIButton *applyButton = [UIButton buttonWithType:UIButtonTypeSystem];
-        applyButton.frame = CGRectMake(0, 0, 64, 32);
-        [applyButton setTitle:@"Apply" forState:UIControlStateNormal];
-        applyButton.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightSemibold];
-        applyButton.tag = indexPath.row;
-        [applyButton addTarget:self action:@selector(ls_applyBookmarkFromButton:) forControlEvents:UIControlEventTouchUpInside];
-        cell.accessoryView = applyButton;
+        UIListContentConfiguration *content = [UIListContentConfiguration subtitleCellConfiguration];
+        content.text = title;
+        content.textProperties.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
+        content.textProperties.color = UIColor.labelColor;
+        if (CLLocationCoordinate2DIsValid(coordinate)) {
+            content.secondaryText = [NSString stringWithFormat:@"%.5f, %.5f", coordinate.latitude, coordinate.longitude];
+        }
+        content.secondaryTextProperties.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
+        content.secondaryTextProperties.color = UIColor.secondaryLabelColor;
+        content.image = [UIImage systemImageNamed:@"bookmark.fill"];
+        content.imageProperties.tintColor = UIColor.systemYellowColor;
+        cell.contentConfiguration = content;
+
+        UIButton *applyBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+        applyBtn.frame = CGRectMake(0, 0, 68, 30);
+        [applyBtn setTitle:@"Apply" forState:UIControlStateNormal];
+        [applyBtn setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+        applyBtn.titleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightBold];
+        applyBtn.backgroundColor = UIColor.systemBlueColor;
+        applyBtn.layer.cornerRadius = 15.0;
+        applyBtn.layer.cornerCurve = kCACornerCurveContinuous;
+        applyBtn.tag = indexPath.row;
+        [applyBtn addTarget:self action:@selector(ls_applyBookmarkFromButton:) forControlEvents:UIControlEventTouchUpInside];
+        cell.accessoryView = applyBtn;
         cell.accessoryType = UITableViewCellAccessoryNone;
     }
 
-    UIListContentConfiguration *content = [UIListContentConfiguration subtitleCellConfiguration];
-    content.text = title;
-    content.textProperties.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
-    if (CLLocationCoordinate2DIsValid(coordinate)) {
-        content.secondaryText = [NSString stringWithFormat:@"%.5f, %.5f", coordinate.latitude, coordinate.longitude];
-    }
-    content.secondaryTextProperties.font = [UIFont monospacedDigitSystemFontOfSize:12.0 weight:UIFontWeightRegular];
-    content.secondaryTextProperties.color = UIColor.secondaryLabelColor;
-    cell.contentConfiguration = content;
     return cell;
 }
 
@@ -211,6 +233,10 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         return;
     }
 
+    // Switch back to Map tab and center pin at chosen coordinate
+    self.panelTab = LSMapPickerPanelTabMap;
+    self.panelTabSegment.selectedSegmentIndex = LSMapPickerPanelTabMap;
+    [self updatePanelTabVisibility];
     [self movePinToCoordinate:coordinate animated:YES];
 }
 
@@ -229,13 +255,13 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(__unused UIAlertAction *action) {
         typeof(self) strongSelf = weakSelf;
         if (!strongSelf) return;
-        [strongSelf.bookmarksTableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+        [strongSelf.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
     }]];
     [alert addAction:[UIAlertAction actionWithTitle:@"Delete" style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
         typeof(self) strongSelf = weakSelf;
         if (!strongSelf) return;
         [[BookmarksManager shared] removeBookmarkAtIndex:(NSUInteger)indexPath.row];
-        [strongSelf.bookmarksTableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationLeft];
+        [strongSelf.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
     }]];
     [self presentViewController:alert animated:YES completion:nil];
 }
@@ -248,86 +274,15 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     [[BookmarksManager shared] moveBookmarkFromIndex:(NSUInteger)source.row toIndex:(NSUInteger)destination.row];
 }
 
-- (UIView *)ls_bookmarksHeaderForSection:(NSInteger)section {
-    if (section != LSBookmarksSectionSaved) {
-        return nil;
-    }
-
-    UIView *header = [[UIView alloc] init];
-    UILabel *title = [[UILabel alloc] init];
-    title.translatesAutoresizingMaskIntoConstraints = NO;
-    title.text = @"Bookmarks";
-    title.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightSemibold];
-    title.textColor = UIColor.secondaryLabelColor;
-    [header addSubview:title];
-
-    UIButton *editButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    editButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [editButton setTitle:self.bookmarksEditMode ? @"Done" : @"Edit" forState:UIControlStateNormal];
-    editButton.titleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightSemibold];
-    [editButton addTarget:self action:@selector(ls_toggleBookmarksEditMode) forControlEvents:UIControlEventTouchUpInside];
-    [header addSubview:editButton];
-
-    [NSLayoutConstraint activateConstraints:@[
-        [title.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:20.0],
-        [title.centerYAnchor constraintEqualToAnchor:header.centerYAnchor],
-        [editButton.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16.0],
-        [editButton.centerYAnchor constraintEqualToAnchor:header.centerYAnchor],
-        [header.heightAnchor constraintEqualToConstant:28.0]
-    ]];
-    return header;
-}
-
-- (void)ls_handleBookmarksLongPress:(UILongPressGestureRecognizer *)gesture {
-    if (gesture.state != UIGestureRecognizerStateBegan) {
-        return;
-    }
-
-    CGPoint point = [gesture locationInView:self.bookmarksTableView];
-    NSIndexPath *indexPath = [self.bookmarksTableView indexPathForRowAtPoint:point];
-    if (!indexPath || indexPath.section != LSBookmarksSectionSaved) {
-        return;
-    }
-
-    NSArray<LSBookmark *> *bookmarks = [BookmarksManager shared].allBookmarks;
-    if (indexPath.row >= (NSInteger)bookmarks.count) {
-        return;
-    }
-
-    LSBookmark *bookmark = bookmarks[indexPath.row];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Rename Bookmark"
-                                                                   message:nil
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-        textField.text = bookmark.name;
-    }];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    __weak typeof(self) weakSelf = self;
-    __weak typeof(alert) weakAlert = alert;
-    [alert addAction:[UIAlertAction actionWithTitle:@"Save" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
-        typeof(self) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        UIAlertController *strongAlert = weakAlert;
-        if (!strongAlert) return;
-        NSString *name = strongAlert.textFields.firstObject.text;
-        if (name.length == 0) {
-            return;
-        }
-        [[BookmarksManager shared] renameBookmark:name atIndex:(NSUInteger)indexPath.row];
-        [strongSelf.bookmarksTableView reloadData];
-    }]];
-    [self presentViewController:alert animated:YES completion:nil];
-}
-
 - (void)ls_toggleBookmarksEditMode {
     self.bookmarksEditMode = !self.bookmarksEditMode;
-    [self.bookmarksTableView setEditing:self.bookmarksEditMode animated:YES];
-    [self.bookmarksTableView reloadData];
+    [self.tableView setEditing:self.bookmarksEditMode animated:YES];
+    [self.tableView reloadData];
 }
 
 - (void)ls_applyBookmarkFromButton:(UIButton *)sender {
     NSArray<LSBookmark *> *bookmarks = [BookmarksManager shared].allBookmarks;
-    NSUInteger index = sender.tag;
+    NSUInteger index = (NSUInteger)sender.tag;
     if (index >= bookmarks.count) {
         return;
     }
@@ -343,6 +298,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         [self presentViewController:alert animated:YES completion:nil];
         return;
     }
+
     [store recordRecentCoordinate:bookmark.coordinate name:bookmark.name];
     [self playApplyHaptic];
     LSSetHooksBypassed(NO);
