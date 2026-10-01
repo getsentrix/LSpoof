@@ -66,18 +66,19 @@ jobs:
             if [[ "${{ github.ref }}" == refs/tags/* ]]; then
               TAG="${GITHUB_REF#refs/tags/}"
             else
-              TAG="v1.2.0"
+              TAG="v1.2.1"
             fi
           fi
           echo "Using tag: $TAG"
           cat << 'EOF' > notes.md
-          ## LSpoof v1.2.0 - Drift Visualization, 3-Way Theme Sync & Route Snapping
+          ## LSpoof v1.2.1 - Stable Build · 3-Finger Gesture, Drift Overlay & Route Snapping
 
           ### What's New
-          - **Drift Radius Visualization**: Real-time semi-transparent dashed purple circle overlay (`MKCircleRenderer`) renders around the pin matching the fluctuation slider value.
-          - **3-Way Theme Synchronization**: Replaced binary switch with a native Inset Grouped `System` / `Light` / `Dark` segmented control mapped to `LSAppearancePreference`.
-          - **Route Start Snapping**: Added `"location.fill.viewfinder"` reticle button on the Start Point cell to instantly anchor routes to current spoof or real GPS coordinates.
-          - **Granular Numeric Speed Input**: Upgraded Custom transport speed option with `UIKeyboardTypeDecimalPad`, Done toolbar accessory, and automatic keyboard focus.
+          - **3-Finger Gesture Restored**: Hold three fingers anywhere on screen for 0.8 seconds to open the menu.
+          - **Drift Radius Visualization**: Live dashed purple circle overlay shows your randomized GPS fluctuation area directly on the map.
+          - **System Theme Sync**: Inset Grouped 3-way segmented control (System, Light, Dark) matches iOS appearance dynamically.
+          - **Route Start Snapping**: Reticle viewfinder button instantly snaps route start to current GPS or spoofed location.
+          - **Custom Speed Decimal Pad**: Clean number pad with a Done button for exact route speeds.
 
           ### Assets
           - `LocationSpoofer.dylib`: Sideloadable arm64 Mach-O dynamic library for iOS 14.0+

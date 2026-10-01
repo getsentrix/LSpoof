@@ -7,7 +7,7 @@
 <h3 align="center">Universal iOS Location Spoofer</h3>
 
 <p align="center">
-  Precision GPS spoofer for sideloaded iOS apps with Apple Maps integration, route simulation, and a native iOS interface. <strong>No jailbreak required.</strong>
+  GPS location spoofer for sideloaded iOS apps. Apple Maps integration, route simulation, and a native iOS interface. <strong>No jailbreak required.</strong>
 </p>
 
 <p align="center">
@@ -16,82 +16,61 @@
   <a href="https://github.com/getsentrix/LSpoof/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-09090b?style=flat-square" alt="MIT License"></a>
 </p>
 
-<p align="center">
-  <a href="https://getsentrix.github.io/LSpoof/"><strong>Open Website Showcase & Guide »</strong></a>
-</p>
+---
+
+## ⚡ What's New in v1.2.1 (Stable Build)
+
+- **3-Finger Hold Gesture Restored**: Hold three fingers anywhere on screen for 0.8s to open the menu.
+- **Drift Radius Visualization**: Live dashed purple circle overlay shows your randomized GPS fluctuation area directly on the map.
+- **System Theme Sync**: 3-way theme selector (System, Light, Dark) matches your iOS appearance.
+- **Route Start Snapping**: 1-tap reticle button anchors route start to your current GPS or spoof location.
+- **Custom Speed Decimal Pad**: Clean number pad with a Done button for exact route speeds.
 
 ---
 
-## ⚡ What's New in v1.2.0
+## 📦 How to Install
 
-- **Drift Radius Visualization**: Real-time semi-transparent dashed purple circle overlay (`MKCircleRenderer`) renders around the pin matching the fluctuation slider value.
-- **3-Way Theme Synchronization**: Replaced binary switch with a native Inset Grouped `System` / `Light` / `Dark` segmented control mapped to `LSAppearancePreference`.
-- **Route Start Snapping**: Added `"location.fill.viewfinder"` reticle button on the Start Point cell to instantly anchor routes to current spoof or real GPS coordinates.
-- **Granular Numeric Speed Input**: Upgraded Custom transport speed option with `UIKeyboardTypeDecimalPad`, Done toolbar accessory, and automatic keyboard focus.
+Inject `LocationSpoofer.dylib` into your target app using LiveContainer, Sideloadly, or TrollStore:
 
----
+### LiveContainer (Recommended)
+1. Download `LocationSpoofer.dylib` from [Releases](https://github.com/getsentrix/LSpoof/releases/latest).
+2. Put `LocationSpoofer.dylib` into the **Tweaks** folder.
+3. Turn on the tweak for your app and launch.
 
-## 📦 How to Install (Tweak .dylib)
+### Sideloadly
+1. Drag your target `.ipa` into Sideloadly.
+2. In **Advanced Options** → **Inject Dylibs / Frameworks**, add `LocationSpoofer.dylib`.
+3. Click **Start**.
 
-Because LSpoof is a tweak library (`.dylib`) rather than a standalone application (`.ipa`), inject it into your target app using any sideloading tool:
-
-### 1. LiveContainer (Recommended)
-1. Download `LocationSpoofer.dylib` from [GitHub Releases](https://github.com/getsentrix/LSpoof/releases/latest).
-2. Open **LiveContainer** → **Tweaks** folder and add `LocationSpoofer.dylib`.
-3. Enable the tweak for your loaded app and launch.
-
-### 2. Sideloadly (Windows / macOS)
-1. Load your target `.ipa` in Sideloadly.
-2. Open **Advanced Options** → **Inject Dylibs / Frameworks**.
-3. Add `LocationSpoofer.dylib` and click **Start**.
-
-### 3. TrollStore & Azule
-- Pre-inject `LocationSpoofer.dylib` using Azule:
-  ```bash
-  azule -i App.ipa -o SpoofedApp.ipa -f LocationSpoofer.dylib
-  ```
-- Install the resulting `.ipa` directly in TrollStore.
+### TrollStore / Azule
+```bash
+azule -i App.ipa -o SpoofedApp.ipa -f LocationSpoofer.dylib
+```
+Install the output `.ipa` in TrollStore.
 
 ---
 
 ## 🎮 How to Open the Menu
 
-1. Launch your sideloaded app with `LocationSpoofer.dylib` injected.
-2. **Tap the location menu button in the top bar** (placed right next to the Circle Name pill).
-3. *Alternative gesture:* Press and hold three fingers anywhere on the screen for 0.8 seconds.
-4. Set your target location and tap **Save Settings**.
+1. Launch your sideloaded app.
+2. **Press and hold 3 fingers anywhere on the screen for 0.8 seconds.**
+3. Choose your location and tap **Save Settings**.
 
 ---
 
 ## 🛠️ Features
 
-### 1. Static Spoofing
-- **Search**: Apple MapKit search for addresses, cities, and landmarks.
-- **Interactive Map**: Tap anywhere on the map or drag the pin.
-- **Coordinate Inputs**: Manual inputs for Latitude, Longitude, and Altitude with sign toggle (`+/-`).
-- **Heading Slider**: Rotate compass heading (0°–359°) with live cardinal direction feedback.
-- **Drift Slider**: Subtle GPS fluctuation (5m–150m) to simulate natural movement.
-- **Keep Last Location**: Automatically restores your chosen coordinates across app restarts.
-- **Show Real Location**: Shows your real GPS location alongside the spoofed pin on the map.
-
-### 2. Route Simulation
-- **Point-to-Point**: Tap to set Start and Destination pins.
-- **Turn-by-Turn Paths**: Fetches real driving, walking, or cycling routes from Apple Maps.
-- **Speed Controls**: Walk (5 km/h), Cycle (15 km/h), Drive (50 km/h), or custom speed.
-- **Playback Controls**: Play, pause, or stop movement along the route at any time.
-
-### 3. Bookmarks & Recents
-- **Saved Bookmarks**: Pin frequent places with custom names.
-- **Recent Locations**: Automatically saves your last 5 locations with reverse-geocoded place names.
-- **1-Tap Apply**: Instantly switch to any saved or recent location.
-
-### 4. Automatic Update Alerts
-- Automatically checks GitHub Releases in the background.
-- Alerts you on-screen with release notes and a direct download button when an update is available.
+- **Map & Search**: Search addresses, cities, and landmarks with Apple Maps. Tap or drag the pin anywhere.
+- **Coordinates**: Enter exact Latitude, Longitude, and Altitude with sign toggle (`+/-`).
+- **Bearing & Direction**: Compass heading slider (0°–359°) with cardinal direction feedback.
+- **GPS Drift**: Natural fluctuation slider (5m–150m) with live visual circle overlay.
+- **Route Simulation**: Set start and end points along real roads. Walk (5 km/h), Cycle (15 km/h), Drive (50 km/h), or Custom speed.
+- **Bookmarks & Recents**: Save favorites with custom names and quick-apply your last 5 locations.
+- **Auto-Update Alerts**: Alerts you when an update is available on GitHub with a 1-tap download prompt.
 
 ---
 
-## 🔨 Building from Source
+## 🔨 Build from Source
 
 ```bash
 export THEOS=/path/to/theos
@@ -99,12 +78,10 @@ make clean
 make
 ```
 
-Output: `.theos/obj/debug/LocationSpoofer.dylib`
-
-Targets `arm64` iOS 14.0+.
+Output: `.theos/obj/debug/LocationSpoofer.dylib` (arm64 iOS 14.0+)
 
 ---
 
 ## 📄 License
 
-Licensed under the [MIT License](LICENSE). Maintained by [getsentrix](https://github.com/getsentrix).
+MIT License. Maintained by [getsentrix](https://github.com/getsentrix).

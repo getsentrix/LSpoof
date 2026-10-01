@@ -890,16 +890,6 @@ static const CGFloat kLSMapHeight = 220.0;
     [self.darkModeSwitch addTarget:self action:@selector(handleDarkModeToggled:) forControlEvents:UIControlEventValueChanged];
     self.darkModeCell = self.themeSelectionCell;
 
-    self.floatingButtonSwitch = [[UISwitch alloc] init];
-    self.floatingButtonSwitch.on = [[PersistenceManager shared] floatingButtonEnabled];
-    [self.floatingButtonSwitch addTarget:self action:@selector(handleFloatingButtonToggled:) forControlEvents:UIControlEventValueChanged];
-
-    self.floatingButtonCell = [self ls_createToggleCellWithBadgeSymbol:@"location.fill"
-                                                            badgeColor:UIColor.systemPurpleColor
-                                                                 title:@"Top Bar Button"
-                                                              subtitle:@"Access menu button in app header"
-                                                               control:self.floatingButtonSwitch];
-
     // 5: Action Button Cells (Apply/Update Location)
     self.applyButtonCell = [self ls_createButtonCellWithView:self.applyButton];
     self.stopButtonCell = [self ls_createButtonCellWithView:self.stopButton];
@@ -1354,11 +1344,6 @@ static const CGFloat kLSMapHeight = 220.0;
     [feedback impactOccurred];
 }
 
-- (void)handleFloatingButtonToggled:(UISwitch *)sender {
-    [PersistenceManager shared].floatingButtonEnabled = sender.isOn;
-    [LSOverlayManager setFloatingButtonHidden:!sender.isOn];
-}
-
 #pragma mark - Search Suggestions & Autocomplete
 
 - (void)configureSearchCompleter {
@@ -1730,8 +1715,6 @@ static const CGFloat kLSMapHeight = 220.0;
     } else {
         store.appearancePreference = self.darkModeSwitch.isOn ? LSAppearancePreferenceDark : LSAppearancePreferenceLight;
     }
-    store.floatingButtonEnabled = self.floatingButtonSwitch.isOn;
-    [LSOverlayManager setFloatingButtonHidden:!self.floatingButtonSwitch.isOn];
     [self updateDriftRadiusOverlay];
 
     [self playApplyHaptic];
@@ -1896,7 +1879,7 @@ static const CGFloat kLSMapHeight = 220.0;
         case 1: return 1; // Preview & Bookmark
         case 2: return 3; // Latitude, Longitude, Altitude
         case 3: return 1; // Heading slider
-        case 4: return self.fluctuationSwitch.isOn ? 6 : 5; // Fluctuation, (Radius Slider), Keep Last, Show Real, Dark Mode, Floating Button
+        case 4: return self.fluctuationSwitch.isOn ? 5 : 4; // Fluctuation, (Radius Slider), Keep Last, Show Real, Theme
         case 5: return 1; // Apply / Update Location
         default: return 0;
     }
@@ -2005,13 +1988,11 @@ static const CGFloat kLSMapHeight = 220.0;
                 if (indexPath.row == 1) return self.fluctuationRadiusCell;
                 if (indexPath.row == 2) return self.keepLastSpoofCell;
                 if (indexPath.row == 3) return self.showRealLocationCell;
-                if (indexPath.row == 4) return self.themeSelectionCell;
-                return self.floatingButtonCell;
+                return self.themeSelectionCell;
             } else {
                 if (indexPath.row == 1) return self.keepLastSpoofCell;
                 if (indexPath.row == 2) return self.showRealLocationCell;
-                if (indexPath.row == 3) return self.themeSelectionCell;
-                return self.floatingButtonCell;
+                return self.themeSelectionCell;
             }
         }
 
