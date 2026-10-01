@@ -66,19 +66,19 @@ jobs:
             if [[ "${{ github.ref }}" == refs/tags/* ]]; then
               TAG="${GITHUB_REF#refs/tags/}"
             else
-              TAG="v1.1.4"
+              TAG="v1.1.5"
             fi
           fi
           echo "Using tag: $TAG"
           cat << 'EOF' > notes.md
-          ## LSpoof v1.1.4 - Dark Mode, 3-Tab Layout & UI Refinements
+          ## LSpoof v1.1.5 - Liquid Glass UI, Staged Settings & Route Refinements
 
           ### What's New
-          - **Explicit Dark Mode Support**: Added Dark Mode toggle to force dark styling across all windows, bypassing host apps (such as LiveContainer) that lock interface style to light mode.
-          - **Unified 3-Tab Segment Control**: Replaced stacked dual segmented controls with a single clean control: `[Location | Route | Saved]`.
-          - **Dynamic Map & Search Collapsing**: When viewing Saved Bookmarks or Recents, the map and search bar cleanly collapse so bookmarks use the full sheet.
-          - **Fixed Duplicate Coordinates in Recents**: Recents now display "Pinned Location" with clean coordinates until reverse geocoding resolves the address or landmark name.
-          - **Text Wrapping & Clean Buttons**: Subtitles now wrap cleanly without truncation. Replaced redundant Stop Spoofing and Cancel buttons with the primary Section 0 switch and a clean Update Location button.
+          - **Staged Settings**: Settings, spoof coordinates, and simulations do not alter GPS until explicitly tapping **Save Settings**.
+          - **True iOS Liquid Glass UI**: Clean native UIKit design with continuous corner curves (`kCACornerCurveContinuous`), 16pt radii, and zero emulated blur lag.
+          - **Mini Map Preview on Saved Tab**: Mini map preview now stays visible (220pt) when viewing Bookmarks and Recents, jumping directly to tapped coordinates.
+          - **Elaborated Heading & Bearing**: Added detailed footer instructions explaining how compass heading (0°-359°) influences Apple Maps, fitness apps, and games.
+          - **Refined Route & Button Padding**: Added generous 52pt button heights, multi-line address support, and separated Get Route Directions into its own card section.
 
           ### Assets
           - `LocationSpoofer.dylib`: Sideloadable arm64 Mach-O dynamic library for iOS 14.0+

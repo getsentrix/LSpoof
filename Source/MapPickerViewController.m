@@ -498,14 +498,14 @@ static const CGFloat kLSMapHeight = 220.0;
     // Action buttons
     self.applyButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.applyButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.applyButton setTitle:@"  Apply Location" forState:UIControlStateNormal];
+    [self.applyButton setTitle:@"  Save Settings" forState:UIControlStateNormal];
     [self.applyButton setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
-    self.applyButton.titleLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightBold];
-    UIImage *checkIcon = [MapPickerViewController systemImageNamedWithFallback:@"checkmark.circle.fill" configuration:[UIImageSymbolConfiguration configurationWithPointSize:17.0 weight:UIFontWeightBold]];
+    self.applyButton.titleLabel.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightBold];
+    UIImage *checkIcon = [MapPickerViewController systemImageNamedWithFallback:@"checkmark.circle.fill" configuration:[UIImageSymbolConfiguration configurationWithPointSize:18.0 weight:UIFontWeightBold]];
     [self.applyButton setImage:checkIcon forState:UIControlStateNormal];
     self.applyButton.tintColor = UIColor.whiteColor;
     self.applyButton.backgroundColor = UIColor.systemBlueColor;
-    self.applyButton.layer.cornerRadius = 14.0;
+    self.applyButton.layer.cornerRadius = 16.0;
     self.applyButton.layer.cornerCurve = kCACornerCurveContinuous;
     [self.applyButton addTarget:self action:@selector(handleApply) forControlEvents:UIControlEventTouchUpInside];
 
@@ -684,6 +684,15 @@ static const CGFloat kLSMapHeight = 220.0;
     headingLbl.textColor = UIColor.labelColor;
     [self.headingCell.contentView addSubview:headingLbl];
 
+    UILabel *headingSub = [[UILabel alloc] init];
+    headingSub.translatesAutoresizingMaskIntoConstraints = NO;
+    headingSub.text = @"Controls device compass orientation (0°–359°) reported to navigation apps";
+    headingSub.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightRegular];
+    headingSub.textColor = UIColor.secondaryLabelColor;
+    headingSub.numberOfLines = 0;
+    headingSub.lineBreakMode = NSLineBreakByWordWrapping;
+    [self.headingCell.contentView addSubview:headingSub];
+
     self.headingValueLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [self.headingCell.contentView addSubview:self.headingValueLabel];
 
@@ -695,16 +704,20 @@ static const CGFloat kLSMapHeight = 220.0;
         [headingBadge.topAnchor constraintEqualToAnchor:self.headingCell.contentView.topAnchor constant:12.0],
 
         [headingLbl.leadingAnchor constraintEqualToAnchor:headingBadge.trailingAnchor constant:12.0],
-        [headingLbl.centerYAnchor constraintEqualToAnchor:headingBadge.centerYAnchor],
+        [headingLbl.topAnchor constraintEqualToAnchor:self.headingCell.contentView.topAnchor constant:10.0],
 
         [self.headingValueLabel.trailingAnchor constraintEqualToAnchor:self.headingCell.contentView.trailingAnchor constant:-16.0],
-        [self.headingValueLabel.centerYAnchor constraintEqualToAnchor:headingBadge.centerYAnchor],
+        [self.headingValueLabel.centerYAnchor constraintEqualToAnchor:headingLbl.centerYAnchor],
         [self.headingValueLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:headingLbl.trailingAnchor constant:8.0],
 
-        [self.headingSlider.topAnchor constraintEqualToAnchor:headingBadge.bottomAnchor constant:12.0],
+        [headingSub.leadingAnchor constraintEqualToAnchor:headingLbl.leadingAnchor],
+        [headingSub.topAnchor constraintEqualToAnchor:headingLbl.bottomAnchor constant:2.0],
+        [headingSub.trailingAnchor constraintEqualToAnchor:self.headingCell.contentView.trailingAnchor constant:-16.0],
+
+        [self.headingSlider.topAnchor constraintEqualToAnchor:headingSub.bottomAnchor constant:10.0],
         [self.headingSlider.leadingAnchor constraintEqualToAnchor:self.headingCell.contentView.leadingAnchor constant:16.0],
         [self.headingSlider.trailingAnchor constraintEqualToAnchor:self.headingCell.contentView.trailingAnchor constant:-16.0],
-        [self.headingSlider.bottomAnchor constraintEqualToAnchor:self.headingCell.contentView.bottomAnchor constant:-14.0]
+        [self.headingSlider.bottomAnchor constraintEqualToAnchor:self.headingCell.contentView.bottomAnchor constant:-12.0]
     ]];
 
     // 3: Options (Fluctuation, Radius, Keep Last, Show Real)
@@ -880,11 +893,11 @@ static const CGFloat kLSMapHeight = 220.0;
     [buttonView removeFromSuperview];
     [cell.contentView addSubview:buttonView];
     [NSLayoutConstraint activateConstraints:@[
-        [buttonView.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor],
-        [buttonView.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor],
-        [buttonView.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:4.0],
-        [buttonView.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-4.0],
-        [buttonView.heightAnchor constraintEqualToConstant:48.0]
+        [buttonView.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:4.0],
+        [buttonView.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-4.0],
+        [buttonView.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:12.0],
+        [buttonView.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-16.0],
+        [buttonView.heightAnchor constraintEqualToConstant:52.0]
     ]];
     return cell;
 }
@@ -1100,8 +1113,6 @@ static const CGFloat kLSMapHeight = 220.0;
 
 - (void)handleHeadingSliderChanged:(UISlider *)sender {
     (void)sender;
-    NSInteger heading = (NSInteger)lroundf(self.headingSlider.value);
-    [PersistenceManager shared].heading = (CLLocationDirection)heading;
     [self updateHeadingLabel];
 }
 
@@ -1119,8 +1130,6 @@ static const CGFloat kLSMapHeight = 220.0;
 
 - (void)handleFluctuationToggle {
     self.fluctuationSwitch.userInteractionEnabled = NO;
-    PersistenceManager *store = [PersistenceManager shared];
-    store.fluctuationEnabled = self.fluctuationSwitch.isOn;
 
     NSIndexPath *radiusPath = [NSIndexPath indexPathForRow:1 inSection:4];
     __weak typeof(self) weakSelf = self;
@@ -1139,7 +1148,6 @@ static const CGFloat kLSMapHeight = 220.0;
 - (void)handleFluctuationRadiusSliderChanged:(UISlider *)sender {
     double radius = round(sender.value);
     self.fluctuationRadiusLabel.text = [NSString stringWithFormat:@"%.0f m", radius];
-    [PersistenceManager shared].fluctuationRadius = radius;
 }
 
 - (void)handleCheckForUpdatesTapped {
@@ -1157,52 +1165,33 @@ static const CGFloat kLSMapHeight = 220.0;
         self.heroStatusDot.backgroundColor = UIColor.systemGreenColor;
         self.heroStatusTitleLabel.text = simulator.isSimulating ? @"Simulation Active" : @"Spoofing Active";
         self.heroStatusSubtitleLabel.text = @"Apps receive your chosen GPS coordinates";
-        [self.applyButton setTitle:@"  Update Location" forState:UIControlStateNormal];
     } else {
         self.heroStatusDot.backgroundColor = UIColor.systemOrangeColor;
         self.heroStatusTitleLabel.text = @"Spoofing Inactive";
         self.heroStatusSubtitleLabel.text = @"Using device native GPS · Toggle to activate";
-        [self.applyButton setTitle:@"  Apply Location" forState:UIControlStateNormal];
     }
+    [self.applyButton setTitle:@"  Save Settings" forState:UIControlStateNormal];
 }
 
 - (void)handleHeroStatusSwitchToggled:(UISwitch *)sender {
-    PersistenceManager *store = [PersistenceManager shared];
     if (sender.isOn) {
-        if (![self applyFieldsToCoordinate] || ![self applyAltitudeField]) {
-            [self showInvalidCoordinateFeedback];
-            sender.on = NO;
-            return;
-        }
-        if (![store setSpoofCoordinate:self.selectedCoordinate enabled:YES]) {
-            [self showInvalidCoordinateFeedback];
-            sender.on = NO;
-            return;
-        }
-        [store recordRecentCoordinate:self.selectedCoordinate name:nil];
-        [self playApplyHaptic];
-        [self updateHeroStatusCell];
-        [self refreshStatusPill];
-        [self.tableView reloadSections:[NSIndexSet indexSetWithIndex:5] withRowAnimation:UITableViewRowAnimationNone];
+        self.heroStatusDot.backgroundColor = UIColor.systemGreenColor;
+        self.heroStatusTitleLabel.text = @"Spoofing Scheduled";
+        self.heroStatusSubtitleLabel.text = @"Tap 'Save Settings' below to activate spoofing";
     } else {
-        [[LSRouteSimulator shared] stop];
-        [store clearSpoof];
-        store.simulationWasActive = NO;
-        [self playSimulationStopHaptic];
-        [self updateHeroStatusCell];
-        [self refreshStatusPill];
-        [self.tableView reloadSections:[NSIndexSet indexSetWithIndex:5] withRowAnimation:UITableViewRowAnimationNone];
+        self.heroStatusDot.backgroundColor = UIColor.systemOrangeColor;
+        self.heroStatusTitleLabel.text = @"Spoofing Deactivated";
+        self.heroStatusSubtitleLabel.text = @"Tap 'Save Settings' below to restore real GPS";
     }
 }
 
 
 - (void)handleKeepLastSpoofToggle {
-    [PersistenceManager shared].keepLastSpoof = self.keepLastSpoofSwitch.isOn;
+    // Draft only — committed when Save Settings is tapped
 }
 
 - (void)handleShowRealLocationToggle {
-    [PersistenceManager shared].showRealLocation = self.showRealLocationSwitch.isOn;
-    [self refreshStatusPill];
+    // Draft only — committed when Save Settings is tapped
 }
 
 - (void)handleDarkModeToggled:(UISwitch *)sender {
@@ -1555,13 +1544,29 @@ static const CGFloat kLSMapHeight = 220.0;
     }
 
     PersistenceManager *store = [PersistenceManager shared];
-    if (![store setSpoofCoordinate:self.selectedCoordinate enabled:YES]) {
-        [self showInvalidCoordinateFeedback];
-        return;
+    BOOL wantSpoof = self.heroStatusSwitch.isOn;
+
+    if (wantSpoof) {
+        if (![store setSpoofCoordinate:self.selectedCoordinate enabled:YES]) {
+            [self showInvalidCoordinateFeedback];
+            return;
+        }
+        NSString *name = (self.searchBar.text.length > 0) ? self.searchBar.text : nil;
+        [store recordRecentCoordinate:self.selectedCoordinate name:name];
+    } else {
+        [[LSRouteSimulator shared] stop];
+        [store clearSpoof];
+        store.simulationWasActive = NO;
     }
 
-    NSString *name = (self.searchBar.text.length > 0) ? self.searchBar.text : nil;
-    [store recordRecentCoordinate:self.selectedCoordinate name:name];
+    // Atomically commit all user options on Save Settings
+    store.heading = (CLLocationDirection)lroundf(self.headingSlider.value);
+    store.fluctuationEnabled = self.fluctuationSwitch.isOn;
+    store.fluctuationRadius = round(self.fluctuationRadiusSlider.value);
+    store.keepLastSpoof = self.keepLastSpoofSwitch.isOn;
+    store.showRealLocation = self.showRealLocationSwitch.isOn;
+    store.appearancePreference = self.darkModeSwitch.isOn ? LSAppearancePreferenceDark : LSAppearancePreferenceLight;
+
     [self playApplyHaptic];
     [self updateHeroStatusCell];
     [self refreshStatusPill];
@@ -1743,6 +1748,22 @@ static const CGFloat kLSMapHeight = 220.0;
         case 4: return @"Spoofing Options";
         default: return nil;
     }
+}
+
+- (nullable NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+    if (tableView == self.suggestionsTableView) {
+        return nil;
+    }
+
+    if (self.panelTab == LSMapPickerPanelTabSaved || self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute) {
+        return nil;
+    }
+
+    if (section == 3) {
+        return @"Adjusts the compass bearing reported to Apple Maps, Google Maps, fitness trackers, and games so your facing direction matches real travel.";
+    }
+
+    return nil;
 }
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {

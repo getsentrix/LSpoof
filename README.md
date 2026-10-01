@@ -22,14 +22,13 @@
 
 ---
 
-## ⚡ What's New in v1.1.4
+## ⚡ What's New in v1.1.5
 
-- **Dark Mode Support**: New toggle in options forces dark styling, fixing host apps (like LiveContainer) that forced light mode.
-- **Unified 3-Tab Bar**: Consolidated into three clear tabs: `[Location | Route | Saved]`.
-- **Collapsing Map for Bookmarks**: Switching to the Saved tab collapses the map and search bar completely so your bookmarks and recent spots take up the full screen.
-- **Cleaned Up Controls**: Removed duplicate status badges and redundant buttons. The top active switch turns spoofing on or off instantly, and one clean button updates your spot.
-- **Fixed Recent Names**: Recent locations now show "Pinned Location" with clean coordinates until reverse lookup finds the real address or landmark.
-- **No Text Cutoff**: Subtitles now wrap cleanly on smaller screens without being cut off.
+- **Staged Settings**: Nothing changes on device GPS until you tap **Save Settings**.
+- **True iOS Liquid Glass UI**: Native UIKit styling with continuous curves and zero lag.
+- **Mini Map Preview on Saved Tab**: Mini map stays visible when viewing Bookmarks and Recents, jumping straight to selected pins.
+- **Heading & Bearing Guide**: In-app explanation for compass direction in navigation and fitness apps.
+- **Refined Route & Button Padding**: Generous 52pt button heights and dedicated card sections for route planning.
 
 ---
 

@@ -22,7 +22,7 @@
     [self.getRouteButton setImage:routeIcon forState:UIControlStateNormal];
     self.getRouteButton.tintColor = UIColor.whiteColor;
     self.getRouteButton.backgroundColor = UIColor.systemBlueColor;
-    self.getRouteButton.layer.cornerRadius = 14.0;
+    self.getRouteButton.layer.cornerRadius = 16.0;
     self.getRouteButton.layer.cornerCurve = kCACornerCurveContinuous;
     [self.getRouteButton addTarget:self action:@selector(handleGetRouteTapped) forControlEvents:UIControlEventTouchUpInside];
 
@@ -65,7 +65,7 @@
     [self.playRouteButton setImage:playIcon forState:UIControlStateNormal];
     self.playRouteButton.tintColor = UIColor.whiteColor;
     self.playRouteButton.backgroundColor = UIColor.systemGreenColor;
-    self.playRouteButton.layer.cornerRadius = 14.0;
+    self.playRouteButton.layer.cornerRadius = 16.0;
     self.playRouteButton.layer.cornerCurve = kCACornerCurveContinuous;
     [self.playRouteButton addTarget:self action:@selector(handlePlayRouteTapped) forControlEvents:UIControlEventTouchUpInside];
 
@@ -80,7 +80,7 @@
     [self.pauseRouteButton setImage:pauseIcon forState:UIControlStateNormal];
     self.pauseRouteButton.tintColor = UIColor.labelColor;
     self.pauseRouteButton.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-    self.pauseRouteButton.layer.cornerRadius = 14.0;
+    self.pauseRouteButton.layer.cornerRadius = 16.0;
     self.pauseRouteButton.layer.cornerCurve = kCACornerCurveContinuous;
     self.pauseRouteButton.layer.borderWidth = 1.0 / UIScreen.mainScreen.scale;
     self.pauseRouteButton.layer.borderColor = UIColor.separatorColor.CGColor;
@@ -97,7 +97,7 @@
     [self.stopRouteButton setImage:stopIcon forState:UIControlStateNormal];
     self.stopRouteButton.tintColor = UIColor.systemRedColor;
     self.stopRouteButton.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.12];
-    self.stopRouteButton.layer.cornerRadius = 14.0;
+    self.stopRouteButton.layer.cornerRadius = 16.0;
     self.stopRouteButton.layer.cornerCurve = kCACornerCurveContinuous;
     self.stopRouteButton.layer.borderWidth = 1.0;
     self.stopRouteButton.layer.borderColor = [UIColor.systemRedColor colorWithAlphaComponent:0.4].CGColor;
@@ -123,6 +123,7 @@
     self.routeStartSubLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.routeStartSubLabel.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
     self.routeStartSubLabel.textColor = UIColor.secondaryLabelColor;
+    self.routeStartSubLabel.numberOfLines = 0;
     self.routeStartSubLabel.text = @"Tap map to set start position";
     [self.routeStartCell.contentView addSubview:self.routeStartSubLabel];
 
@@ -131,11 +132,11 @@
         [startBadge.centerYAnchor constraintEqualToAnchor:self.routeStartCell.contentView.centerYAnchor],
 
         [startTitle.leadingAnchor constraintEqualToAnchor:startBadge.trailingAnchor constant:12.0],
-        [startTitle.topAnchor constraintEqualToAnchor:self.routeStartCell.contentView.topAnchor constant:10.0],
+        [startTitle.topAnchor constraintEqualToAnchor:self.routeStartCell.contentView.topAnchor constant:12.0],
 
         [self.routeStartSubLabel.leadingAnchor constraintEqualToAnchor:startTitle.leadingAnchor],
-        [self.routeStartSubLabel.topAnchor constraintEqualToAnchor:startTitle.bottomAnchor constant:3.0],
-        [self.routeStartSubLabel.bottomAnchor constraintEqualToAnchor:self.routeStartCell.contentView.bottomAnchor constant:-10.0],
+        [self.routeStartSubLabel.topAnchor constraintEqualToAnchor:startTitle.bottomAnchor constant:4.0],
+        [self.routeStartSubLabel.bottomAnchor constraintEqualToAnchor:self.routeStartCell.contentView.bottomAnchor constant:-12.0],
         [self.routeStartSubLabel.trailingAnchor constraintEqualToAnchor:self.routeStartCell.contentView.trailingAnchor constant:-16.0]
     ]];
 
@@ -158,6 +159,7 @@
     self.routeDestSubLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.routeDestSubLabel.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
     self.routeDestSubLabel.textColor = UIColor.secondaryLabelColor;
+    self.routeDestSubLabel.numberOfLines = 0;
     self.routeDestSubLabel.text = @"Tap map to set destination";
     [self.routeDestCell.contentView addSubview:self.routeDestSubLabel];
 
@@ -166,11 +168,11 @@
         [destBadge.centerYAnchor constraintEqualToAnchor:self.routeDestCell.contentView.centerYAnchor],
 
         [destTitle.leadingAnchor constraintEqualToAnchor:destBadge.trailingAnchor constant:12.0],
-        [destTitle.topAnchor constraintEqualToAnchor:self.routeDestCell.contentView.topAnchor constant:10.0],
+        [destTitle.topAnchor constraintEqualToAnchor:self.routeDestCell.contentView.topAnchor constant:12.0],
 
         [self.routeDestSubLabel.leadingAnchor constraintEqualToAnchor:destTitle.leadingAnchor],
-        [self.routeDestSubLabel.topAnchor constraintEqualToAnchor:destTitle.bottomAnchor constant:3.0],
-        [self.routeDestSubLabel.bottomAnchor constraintEqualToAnchor:self.routeDestCell.contentView.bottomAnchor constant:-10.0],
+        [self.routeDestSubLabel.topAnchor constraintEqualToAnchor:destTitle.bottomAnchor constant:4.0],
+        [self.routeDestSubLabel.bottomAnchor constraintEqualToAnchor:self.routeDestCell.contentView.bottomAnchor constant:-12.0],
         [self.routeDestSubLabel.trailingAnchor constraintEqualToAnchor:self.routeDestCell.contentView.trailingAnchor constant:-16.0]
     ]];
 
@@ -183,11 +185,11 @@
 
     [self.routeGetDirectionsCell.contentView addSubview:self.getRouteButton];
     [NSLayoutConstraint activateConstraints:@[
-        [self.getRouteButton.leadingAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.leadingAnchor],
-        [self.getRouteButton.trailingAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.trailingAnchor],
-        [self.getRouteButton.topAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.topAnchor constant:4.0],
-        [self.getRouteButton.bottomAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.bottomAnchor constant:-4.0],
-        [self.getRouteButton.heightAnchor constraintEqualToConstant:48.0]
+        [self.getRouteButton.leadingAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.leadingAnchor constant:4.0],
+        [self.getRouteButton.trailingAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.trailingAnchor constant:-4.0],
+        [self.getRouteButton.topAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.topAnchor constant:12.0],
+        [self.getRouteButton.bottomAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.bottomAnchor constant:-16.0],
+        [self.getRouteButton.heightAnchor constraintEqualToConstant:52.0]
     ]];
 
     // Transport mode cell
@@ -262,11 +264,11 @@
     if (!simulator.isSimulating) {
         [self.routePlaybackCell.contentView addSubview:self.playRouteButton];
         [NSLayoutConstraint activateConstraints:@[
-            [self.playRouteButton.leadingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.leadingAnchor],
-            [self.playRouteButton.trailingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.trailingAnchor],
-            [self.playRouteButton.topAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.topAnchor constant:4.0],
-            [self.playRouteButton.bottomAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.bottomAnchor constant:-4.0],
-            [self.playRouteButton.heightAnchor constraintEqualToConstant:48.0]
+            [self.playRouteButton.leadingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.leadingAnchor constant:4.0],
+            [self.playRouteButton.trailingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.trailingAnchor constant:-4.0],
+            [self.playRouteButton.topAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.topAnchor constant:12.0],
+            [self.playRouteButton.bottomAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.bottomAnchor constant:-16.0],
+            [self.playRouteButton.heightAnchor constraintEqualToConstant:52.0]
         ]];
     } else {
         UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[self.pauseRouteButton, self.stopRouteButton]];
@@ -277,11 +279,11 @@
         [self.routePlaybackCell.contentView addSubview:stack];
 
         [NSLayoutConstraint activateConstraints:@[
-            [stack.leadingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.leadingAnchor],
-            [stack.trailingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.trailingAnchor],
-            [stack.topAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.topAnchor constant:4.0],
-            [stack.bottomAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.bottomAnchor constant:-4.0],
-            [stack.heightAnchor constraintEqualToConstant:48.0]
+            [stack.leadingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.leadingAnchor constant:4.0],
+            [stack.trailingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.trailingAnchor constant:-4.0],
+            [stack.topAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.topAnchor constant:12.0],
+            [stack.bottomAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.bottomAnchor constant:-16.0],
+            [stack.heightAnchor constraintEqualToConstant:52.0]
         ]];
     }
 }
@@ -606,22 +608,19 @@
     BOOL hasRouteOrSim = self.fetchedRoute != nil || [[LSRouteSimulator shared] isSimulating];
 
     if (section == 0) {
-        return 3; // Start Point, Destination, Get Route Button
+        return 2; // Start Point, Destination
+    }
+
+    if (section == 1) {
+        return 1; // Get Route Directions button
     }
 
     if (hasRouteOrSim) {
-        if (section == 1) {
+        if (section == 2) {
             return (self.transportModeSegment.selectedSegmentIndex == 3) ? 2 : 1;
         }
-        if (section == 2) {
-            return 1;
-        }
         if (section == 3) {
-            return 1;
-        }
-    } else {
-        if (section == 1) {
-            return 1; // Cancel button
+            return 1; // Playback controls
         }
     }
     return 0;
@@ -632,8 +631,8 @@
 
     if (section == 0) return @"Route Waypoints";
     if (hasRouteOrSim) {
-        if (section == 1) return @"Transport & Speed";
-        if (section == 2) return @"Playback Controls";
+        if (section == 2) return @"Transport & Speed";
+        if (section == 3) return @"Playback Controls";
     }
     return nil;
 }
@@ -643,27 +642,22 @@
 
     if (indexPath.section == 0) {
         if (indexPath.row == 0) return self.routeStartCell;
-        if (indexPath.row == 1) return self.routeDestCell;
+        return self.routeDestCell;
+    }
+
+    if (indexPath.section == 1) {
         return self.routeGetDirectionsCell;
     }
 
     if (hasRouteOrSim) {
-        if (indexPath.section == 1) {
+        if (indexPath.section == 2) {
             if (indexPath.row == 0) return self.routeTransportCell;
             return self.routeCustomSpeedCell;
         }
 
-        if (indexPath.section == 2) {
+        if (indexPath.section == 3) {
             [self ls_updateRoutePlaybackCell];
             return self.routePlaybackCell;
-        }
-
-        if (indexPath.section == 3) {
-            return self.cancelButtonCell;
-        }
-    } else {
-        if (indexPath.section == 1) {
-            return self.cancelButtonCell;
         }
     }
 

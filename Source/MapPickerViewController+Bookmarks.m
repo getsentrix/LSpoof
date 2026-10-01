@@ -21,11 +21,9 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     BOOL isRoute = (self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute);
     BOOL isLocation = !isSaved && !isRoute;
 
+    self.mapContainer.hidden = NO;
     if (isLocation) {
         self.searchBar.hidden = NO;
-        self.mapContainer.hidden = NO;
-    } else if (isRoute) {
-        self.mapContainer.hidden = NO;
     }
 
     [UIView animateWithDuration:0.25 animations:^{
@@ -42,18 +40,18 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
             self.searchBar.alpha = 0.0;
             self.mapContainer.alpha = 1.0;
         } else {
-            // Saved tab: collapse both search bar and map completely
+            // Saved tab: collapse search bar, KEEP mini map preview visible
             self.searchBarHeightConstraint.constant = 0.0;
             self.searchBarBottomConstraint.constant = 0.0;
-            self.mapHeightConstraint.constant = 0.0;
+            self.mapHeightConstraint.constant = 220.0;
             self.searchBar.alpha = 0.0;
-            self.mapContainer.alpha = 0.0;
+            self.mapContainer.alpha = 1.0;
         }
         [self ls_updateTableHeaderLayout];
     } completion:^(BOOL finished) {
         (void)finished;
         self.searchBar.hidden = !isLocation;
-        self.mapContainer.hidden = isSaved;
+        self.mapContainer.hidden = NO;
         [self ls_updateTableHeaderLayout];
     }];
 
@@ -269,7 +267,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
 
         UIButton *applyBtn = [UIButton buttonWithType:UIButtonTypeSystem];
         applyBtn.frame = CGRectMake(0, 0, 68, 30);
-        [applyBtn setTitle:@"Apply" forState:UIControlStateNormal];
+        [applyBtn setTitle:@"Select" forState:UIControlStateNormal];
         [applyBtn setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
         applyBtn.titleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightBold];
         applyBtn.backgroundColor = UIColor.systemBlueColor;
@@ -308,11 +306,16 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     }
 
     // Switch back to Location tab and center pin at chosen coordinate
+    [self movePinToCoordinate:coordinate animated:YES];
+    self.heroStatusSwitch.on = YES;
+    self.heroStatusDot.backgroundColor = UIColor.systemGreenColor;
+    self.heroStatusTitleLabel.text = @"Spoofing Scheduled";
+    self.heroStatusSubtitleLabel.text = @"Tap 'Save Settings' below to activate spoofing";
     self.panelTab = LSMapPickerPanelTabLocation;
     self.coordinateMode = LSMapPickerCoordinateModeStatic;
     self.panelTabSegment.selectedSegmentIndex = 0;
     [self updatePanelTabVisibility];
-    [self movePinToCoordinate:coordinate animated:YES];
+    [self playBookmarkSavedHaptic];
 }
 
 - (BOOL)ls_bookmarksCanEditRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -374,21 +377,20 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     }
 
     LSBookmark *bookmark = bookmarks[indexPath.row];
-    PersistenceManager *store = [PersistenceManager shared];
-    if (![store setSpoofCoordinate:bookmark.coordinate enabled:YES]) {
-        [self playRouteFailureHaptic];
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Error"
-                                                                       message:@"This bookmark has an invalid coordinate."
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-        [self presentViewController:alert animated:YES completion:nil];
+    if (!CLLocationCoordinate2DIsValid(bookmark.coordinate)) {
         return;
     }
 
-    [store recordRecentCoordinate:bookmark.coordinate name:bookmark.name];
-    [self playApplyHaptic];
-    LSSetHooksBypassed(NO);
-    [self dismissViewControllerAnimated:YES completion:nil];
+    [self movePinToCoordinate:bookmark.coordinate animated:YES];
+    self.heroStatusSwitch.on = YES;
+    self.heroStatusDot.backgroundColor = UIColor.systemGreenColor;
+    self.heroStatusTitleLabel.text = @"Spoofing Scheduled";
+    self.heroStatusSubtitleLabel.text = @"Tap 'Save Settings' below to activate spoofing";
+    self.panelTab = LSMapPickerPanelTabLocation;
+    self.coordinateMode = LSMapPickerCoordinateModeStatic;
+    self.panelTabSegment.selectedSegmentIndex = 0;
+    [self updatePanelTabVisibility];
+    [self playBookmarkSavedHaptic];
 }
 
 - (void)ls_presentStaticMapActionSheetAtCoordinate:(CLLocationCoordinate2D)coordinate {
