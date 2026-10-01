@@ -280,8 +280,29 @@ static CGRect LSFindSettingsButtonFrameInWindow(UIWindow *window) {
         if (v.tag == kLSTopBarButtonTag) continue;
 
         CGRect f = [v convertRect:v.bounds toView:window];
-        if (f.origin.y >= 25.0 && f.origin.y <= 130.0 && f.origin.x >= 8.0 && f.origin.x <= 65.0 &&
-            f.size.width >= 36.0 && f.size.width <= 64.0 && f.size.height >= 36.0 && f.size.height <= 64.0) {
+        if (f.origin.y >= 25.0 && f.origin.y <= 130.0 && f.origin.x >= 8.0 && f.origin.x <= 75.0 &&
+            f.size.width >= 32.0 && f.size.width <= 64.0 && f.size.height >= 32.0 && f.size.height <= 64.0) {
+            return f;
+        }
+        for (UIView *sub in v.subviews) {
+            if (!sub.hidden && sub.alpha > 0.05) [queue addObject:sub];
+        }
+    }
+    return CGRectZero;
+}
+
+static CGRect LSFindInboxButtonFrameInWindow(UIWindow *window) {
+    if (!window) return CGRectZero;
+    CGFloat screenW = window.bounds.size.width;
+    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:window];
+    while (queue.count > 0) {
+        UIView *v = queue.firstObject;
+        [queue removeObjectAtIndex:0];
+        if (v.tag == kLSTopBarButtonTag) continue;
+
+        CGRect f = [v convertRect:v.bounds toView:window];
+        if (f.origin.y >= 25.0 && f.origin.y <= 130.0 && f.origin.x >= (screenW - 90.0) &&
+            f.size.width >= 32.0 && f.size.width <= 64.0 && f.size.height >= 32.0 && f.size.height <= 64.0) {
             return f;
         }
         for (UIView *sub in v.subviews) {
@@ -362,6 +383,26 @@ static CGRect LSFindSettingsButtonFrameInWindow(UIWindow *window) {
         return;
     }
 
+    UIWindow *window = LSHostKeyWindow();
+    if (!window) {
+        self.topBarButton.hidden = YES;
+        return;
+    }
+
+    UIView *circleNameView = LSFindCircleNameViewInWindow(window);
+    CGRect settingsFrame = LSFindSettingsButtonFrameInWindow(window);
+
+    // If neither circle name nor settings button exists on screen (e.g. splash, login, or loading), keep hidden!
+    if (!circleNameView && CGRectIsEmpty(settingsFrame)) {
+        self.topBarButton.hidden = YES;
+        return;
+    }
+
+    if (circleNameView && (circleNameView.hidden || circleNameView.alpha < 0.1 || !circleNameView.window)) {
+        self.topBarButton.hidden = YES;
+        return;
+    }
+
     self.topBarButton.hidden = NO;
 }
 
@@ -378,69 +419,127 @@ static CGRect LSFindSettingsButtonFrameInWindow(UIWindow *window) {
         return;
     }
 
-    CGFloat buttonWidth = 44.0;
-    CGFloat buttonHeight = 44.0;
-    CGFloat buttonX = 240.0;
-    CGFloat buttonY = 56.0;
-
     UIView *circleNameView = LSFindCircleNameViewInWindow(window);
     CGRect settingsFrame = LSFindSettingsButtonFrameInWindow(window);
 
-    if (circleNameView) {
-        CGRect circleFrame = [circleNameView convertRect:circleNameView.bounds toView:window];
-        buttonX = CGRectGetMaxX(circleFrame) + 8.0;
-        buttonY = circleFrame.origin.y + (circleFrame.size.height - buttonHeight) / 2.0;
-    } else if (settingsFrame.size.width > 0) {
+    // If neither circle name nor settings button is found, app is on splash or loading screen.
+    // Do NOT create or show the button until the main map dashboard is actually loaded.
+    if (!circleNameView && CGRectIsEmpty(settingsFrame)) {
+        if (self.topBarButton) {
+            self.topBarButton.hidden = YES;
+        }
+        return;
+    }
+
+    CGRect circleFrame = circleNameView ? [circleNameView convertRect:circleNameView.bounds toView:window] : CGRectZero;
+    CGRect inboxFrame = LSFindInboxButtonFrameInWindow(window);
+
+    // Standard Life360 circular button dimensions: exactly 40.0 x 40.0 pt
+    CGFloat buttonSize = 40.0;
+    if (settingsFrame.size.height >= 36.0 && settingsFrame.size.height <= 48.0) {
+        buttonSize = settingsFrame.size.height;
+    }
+    CGFloat buttonWidth = buttonSize;
+    CGFloat buttonHeight = buttonSize;
+
+    // Y position: exactly match settings button vertical center
+    CGFloat buttonY = 54.0;
+    if (settingsFrame.size.height > 0) {
         buttonY = settingsFrame.origin.y + (settingsFrame.size.height - buttonHeight) / 2.0;
-        buttonX = CGRectGetMaxX(settingsFrame) + 180.0;
-    } else {
-        CGFloat safeTop = window.safeAreaInsets.top;
-        if (safeTop <= 0) safeTop = 47.0;
-        buttonY = safeTop + 4.0;
-        buttonX = 240.0;
+    } else if (circleFrame.size.height > 0) {
+        buttonY = circleFrame.origin.y + (circleFrame.size.height - buttonHeight) / 2.0;
     }
 
-    // Clamp buttonX so it never clips past screen bounds or overlaps right action buttons
+    // X position: center between circle name pill and inbox button, or right next to circle name
     CGFloat screenW = window.bounds.size.width;
-    if (screenW > 0 && (buttonX + buttonWidth) > (screenW - 56.0)) {
-        buttonX = screenW - buttonWidth - 56.0;
-    }
-    if (buttonX < 70.0) {
-        buttonX = 70.0;
+    CGFloat buttonX = 0.0;
+
+    if (circleFrame.size.width > 0 && inboxFrame.size.width > 0) {
+        CGFloat circleRight = CGRectGetMaxX(circleFrame);
+        CGFloat inboxLeft = inboxFrame.origin.x;
+        CGFloat availableSpace = inboxLeft - circleRight;
+
+        if (availableSpace >= buttonWidth) {
+            // Symmetrically center in the available gap
+            buttonX = circleRight + (availableSpace - buttonWidth) / 2.0;
+        } else {
+            // Check space on left between settings and circle pill
+            CGFloat settingsRight = CGRectGetMaxX(settingsFrame);
+            CGFloat leftSpace = circleFrame.origin.x - settingsRight;
+            if (leftSpace >= buttonWidth) {
+                buttonX = settingsRight + (leftSpace - buttonWidth) / 2.0;
+            } else {
+                buttonX = circleRight + 2.0;
+            }
+        }
+    } else if (circleFrame.size.width > 0) {
+        CGFloat circleRight = CGRectGetMaxX(circleFrame);
+        CGFloat rightBound = screenW - 16.0 - buttonWidth;
+        if (circleRight + 8.0 <= rightBound) {
+            buttonX = circleRight + 8.0;
+        } else {
+            buttonX = rightBound;
+        }
+    } else if (settingsFrame.size.width > 0) {
+        buttonX = CGRectGetMaxX(settingsFrame) + 12.0;
+    } else {
+        buttonX = screenW - 16.0 - buttonWidth;
     }
 
-    CGRect targetFrame = CGRectMake(buttonX, buttonY, buttonWidth, buttonHeight);
+    // Ensure button never overlaps circle name pill or inbox button
+    if (circleFrame.size.width > 0 && buttonX < CGRectGetMaxX(circleFrame) + 2.0) {
+        buttonX = CGRectGetMaxX(circleFrame) + 2.0;
+    }
+    if (inboxFrame.size.width > 0 && (buttonX + buttonWidth) > (inboxFrame.origin.x - 2.0)) {
+        buttonX = inboxFrame.origin.x - buttonWidth - 2.0;
+    }
+
+    CGRect targetFrame = CGRectMake(round(buttonX), round(buttonY), buttonWidth, buttonHeight);
 
     if (!self.topBarButton) {
         LSTopBarMenuButton *button = [LSTopBarMenuButton buttonWithType:UIButtonTypeCustom];
         button.tag = kLSTopBarButtonTag;
         button.frame = targetFrame;
-        button.backgroundColor = UIColor.whiteColor;
+
+        if (@available(iOS 13.0, *)) {
+            button.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull traitCollection) {
+                if (traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+                    return [UIColor colorWithRed:0.18 green:0.18 blue:0.20 alpha:1.0];
+                }
+                return [UIColor whiteColor];
+            }];
+        } else {
+            button.backgroundColor = [UIColor whiteColor];
+        }
+
         button.layer.cornerRadius = buttonWidth / 2.0;
         if (@available(iOS 13.0, *)) {
             button.layer.cornerCurve = kCACornerCurveContinuous;
         }
-        button.layer.shadowColor = UIColor.blackColor.CGColor;
+        button.layer.shadowColor = [UIColor colorWithWhite:0.0 alpha:1.0].CGColor;
         button.layer.shadowOffset = CGSizeMake(0.0, 2.0);
-        button.layer.shadowOpacity = 0.15;
+        button.layer.shadowOpacity = 0.10;
         button.layer.shadowRadius = 4.0;
         button.layer.masksToBounds = NO;
-        button.layer.borderWidth = 0.5;
-        button.layer.borderColor = [UIColor colorWithWhite:0.0 alpha:0.06].CGColor;
+        button.layer.borderWidth = 0.0;
+        button.layer.borderColor = nil;
 
-        UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:18.0 weight:UIFontWeightBold];
+        UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:17.0 weight:UIFontWeightSemibold];
         UIImage *icon = [UIImage systemImageNamed:@"location.fill" withConfiguration:config];
         if (!icon) icon = [UIImage systemImageNamed:@"mappin.circle.fill" withConfiguration:config];
         if (!icon) icon = [UIImage systemImageNamed:@"circle.fill" withConfiguration:config];
         [button setImage:icon forState:UIControlStateNormal];
-        // Exact Life360 purple
-        button.tintColor = [UIColor colorWithRed:0.43 green:0.25 blue:0.85 alpha:1.0];
+
+        // Exact Life360 purple: #8652FF (rgb 134, 82, 255)
+        button.tintColor = [UIColor colorWithRed:134.0/255.0 green:82.0/255.0 blue:255.0/255.0 alpha:1.0];
 
         [button addTarget:self action:@selector(handleMenuButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
         self.topBarButton = button;
     } else {
-        if (fabs(self.topBarButton.frame.origin.x - targetFrame.origin.x) > 1.0 ||
-            fabs(self.topBarButton.frame.origin.y - targetFrame.origin.y) > 1.0) {
+        self.topBarButton.layer.cornerRadius = buttonWidth / 2.0;
+        if (fabs(self.topBarButton.frame.origin.x - targetFrame.origin.x) > 0.5 ||
+            fabs(self.topBarButton.frame.origin.y - targetFrame.origin.y) > 0.5 ||
+            fabs(self.topBarButton.frame.size.width - targetFrame.size.width) > 0.5) {
             self.topBarButton.frame = targetFrame;
         }
     }
@@ -459,7 +558,7 @@ static CGRect LSFindSettingsButtonFrameInWindow(UIWindow *window) {
     [impact impactOccurred];
 
     [UIView animateWithDuration:0.08 animations:^{
-        sender.transform = CGAffineTransformMakeScale(0.90, 0.90);
+        sender.transform = CGAffineTransformMakeScale(0.92, 0.92);
     } completion:^(BOOL finished) {
         [UIView animateWithDuration:0.12 animations:^{
             sender.transform = CGAffineTransformIdentity;
@@ -496,7 +595,7 @@ static CGRect LSFindSettingsButtonFrameInWindow(UIWindow *window) {
 
     [LSOverlayManager installSendEventHooks];
 
-    for (NSNumber *delay in @[@0.2, @0.5, @1.0, @2.0]) {
+    for (NSNumber *delay in @[@0.5, @1.0, @2.0, @3.5]) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay.doubleValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             [self setupTopBarButtonIfNeeded];
         });

@@ -22,11 +22,12 @@
 
 ---
 
-## ⚡ What's New in v1.1.8
+## ⚡ What's New in v1.1.9
 
-- **Permanent Top Bar Button**: Attached directly to keyWindow with `LSTopBarMenuButton` expanded touch target. Never gets clipped by container view bounds or removed by subview recycling.
-- **Zero Random Disappearance**: Replaced destructive remove/re-add timer with idempotent frame reconciliation that keeps the button permanently in front.
-- **100% Touch Capture**: Reliable button clicks and zero touch pass-through when the menu is open.
+- **Flush Native Top Bar Button**: Sized and styled identically to Life360's native buttons (40x40 circle, borderless, soft shadow, exact `#8652FF` Life360 purple).
+- **Symmetrical Alignment**: Perfectly centered in the gap between the Circle Name pill and the Inbox button with zero overlap.
+- **Splash Screen Guard**: Completely hides the button during splash screen, login, loading, and modals; only appears when the main map dashboard is actively rendered.
+- **Seamless Dark Mode**: Automatically adapts between pure white and native iOS dark mode (`#2C2C2E`).
 
 ---
 
