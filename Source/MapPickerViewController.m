@@ -25,7 +25,7 @@ static const CGFloat kLSMapHeight = 220.0;
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    self.view.backgroundColor = UIColor.systemGroupedBackgroundColor;
+    self.view.backgroundColor = UIColor.clearColor;
     self.hasSelectedCoordinate = NO;
 
     PersistenceManager *store = [PersistenceManager shared];
@@ -170,12 +170,33 @@ static const CGFloat kLSMapHeight = 220.0;
     return badge;
 }
 
++ (UIColor *)liquidGlassCellBackgroundColor {
+    return [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull tc) {
+        return (tc.userInterfaceStyle == UIUserInterfaceStyleDark)
+            ? [UIColor colorWithWhite:1.0 alpha:0.08]
+            : [UIColor colorWithWhite:1.0 alpha:0.78];
+    }];
+}
+
 #pragma mark - Interface Setup
 
 - (void)buildInterface {
+    self.view.backgroundColor = UIColor.clearColor;
+
+    UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterial];
+    UIVisualEffectView *backdropBlurView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
+    backdropBlurView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view insertSubview:backdropBlurView atIndex:0];
+    [NSLayoutConstraint activateConstraints:@[
+        [backdropBlurView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+        [backdropBlurView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [backdropBlurView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [backdropBlurView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
+    ]];
+
     self.tableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStyleInsetGrouped];
     self.tableView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
+    self.tableView.backgroundColor = UIColor.clearColor;
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
     self.tableView.keyboardDismissMode = UIScrollViewKeyboardDismissModeOnDrag;
@@ -188,7 +209,7 @@ static const CGFloat kLSMapHeight = 220.0;
         [self.tableView.topAnchor constraintEqualToAnchor:safeArea.topAnchor],
         [self.tableView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [self.tableView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-        [self.tableView.bottomAnchor constraintEqualToAnchor:safeArea.bottomAnchor]
+        [self.tableView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
     ]];
 
     [self buildHeaderAndMap];
@@ -258,8 +279,19 @@ static const CGFloat kLSMapHeight = 220.0;
     self.searchBar.layoutMargins = UIEdgeInsetsZero;
     UITextField *tf = self.searchBar.searchTextField;
     tf.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightMedium];
-    tf.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    tf.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull tc) {
+        return (tc.userInterfaceStyle == UIUserInterfaceStyleDark)
+            ? [UIColor colorWithWhite:1.0 alpha:0.08]
+            : [UIColor colorWithWhite:1.0 alpha:0.75];
+    }];
     tf.layer.cornerRadius = 10.0;
+    tf.layer.cornerCurve = kCACornerCurveContinuous;
+    tf.layer.borderWidth = 0.5;
+    tf.layer.borderColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull tc) {
+        return (tc.userInterfaceStyle == UIUserInterfaceStyleDark)
+            ? [UIColor colorWithWhite:1.0 alpha:0.12]
+            : [UIColor colorWithWhite:0.0 alpha:0.08];
+    }].CGColor;
     tf.clipsToBounds = YES;
     [tableHeader addSubview:self.searchBar];
 
@@ -271,12 +303,20 @@ static const CGFloat kLSMapHeight = 220.0;
     // Map container
     self.mapContainer = [[UIView alloc] init];
     self.mapContainer.translatesAutoresizingMaskIntoConstraints = NO;
-    self.mapContainer.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.mapContainer.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull tc) {
+        return (tc.userInterfaceStyle == UIUserInterfaceStyleDark)
+            ? [UIColor colorWithWhite:1.0 alpha:0.08]
+            : [UIColor colorWithWhite:1.0 alpha:0.75];
+    }];
     self.mapContainer.layer.cornerRadius = kLSCornerRadius;
     self.mapContainer.layer.cornerCurve = kCACornerCurveContinuous;
     self.mapContainer.clipsToBounds = YES;
-    self.mapContainer.layer.borderWidth = 1.0 / UIScreen.mainScreen.scale;
-    self.mapContainer.layer.borderColor = UIColor.separatorColor.CGColor;
+    self.mapContainer.layer.borderWidth = 0.5;
+    self.mapContainer.layer.borderColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull tc) {
+        return (tc.userInterfaceStyle == UIUserInterfaceStyleDark)
+            ? [UIColor colorWithWhite:1.0 alpha:0.14]
+            : [UIColor colorWithWhite:0.0 alpha:0.08];
+    }].CGColor;
     [tableHeader addSubview:self.mapContainer];
 
     self.mapView = [[MKMapView alloc] initWithFrame:CGRectZero];
@@ -318,11 +358,15 @@ static const CGFloat kLSMapHeight = 220.0;
     // Floating Search Suggestions Overlay
     self.suggestionsPanel = [[UIView alloc] init];
     self.suggestionsPanel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.suggestionsPanel.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.suggestionsPanel.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull tc) {
+        return (tc.userInterfaceStyle == UIUserInterfaceStyleDark)
+            ? [UIColor colorWithWhite:0.12 alpha:0.95]
+            : [UIColor colorWithWhite:1.0 alpha:0.95];
+    }];
     self.suggestionsPanel.layer.cornerRadius = 14.0;
     self.suggestionsPanel.layer.cornerCurve = kCACornerCurveContinuous;
     self.suggestionsPanel.clipsToBounds = YES;
-    self.suggestionsPanel.layer.borderWidth = 1.0 / UIScreen.mainScreen.scale;
+    self.suggestionsPanel.layer.borderWidth = 0.5;
     self.suggestionsPanel.layer.borderColor = UIColor.separatorColor.CGColor;
     self.suggestionsPanel.hidden = YES;
     self.suggestionsPanel.alpha = 0.0;
@@ -343,6 +387,17 @@ static const CGFloat kLSMapHeight = 220.0;
     self.panelTabSegment = [[UISegmentedControl alloc] initWithItems:@[@"Location", @"Route", @"Saved"]];
     self.panelTabSegment.translatesAutoresizingMaskIntoConstraints = NO;
     self.panelTabSegment.selectedSegmentIndex = 0;
+    self.panelTabSegment.apportionsSegmentWidthsByContent = NO;
+    NSDictionary *normalSegAttrs = @{
+        NSFontAttributeName: [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium],
+        NSForegroundColorAttributeName: UIColor.secondaryLabelColor
+    };
+    NSDictionary *selectedSegAttrs = @{
+        NSFontAttributeName: [UIFont systemFontOfSize:13.0 weight:UIFontWeightBold],
+        NSForegroundColorAttributeName: UIColor.labelColor
+    };
+    [self.panelTabSegment setTitleTextAttributes:normalSegAttrs forState:UIControlStateNormal];
+    [self.panelTabSegment setTitleTextAttributes:selectedSegAttrs forState:UIControlStateSelected];
     [self.panelTabSegment addTarget:self action:@selector(handlePanelTabChanged:) forControlEvents:UIControlEventValueChanged];
     [tableHeader addSubview:self.panelTabSegment];
 
@@ -356,7 +411,7 @@ static const CGFloat kLSMapHeight = 220.0;
     self.coordinateModeBottomConstraint = [self.coordinateModeSegment.bottomAnchor constraintEqualToAnchor:self.coordinateModeSegment.topAnchor];
 
     [NSLayoutConstraint activateConstraints:@[
-        [self.headerView.topAnchor constraintEqualToAnchor:tableHeader.topAnchor constant:12.0],
+        [self.headerView.topAnchor constraintEqualToAnchor:tableHeader.topAnchor constant:24.0],
         [self.headerView.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset],
         [self.headerView.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-kLSHorizontalInset],
 
@@ -554,20 +609,24 @@ static const CGFloat kLSMapHeight = 220.0;
 
 - (void)buildStaticCells {
     // 0: Hero Status Card (Big Active / Inactive indicator & switch)
-    self.heroStatusCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    self.heroStatusCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.heroStatusCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
+    self.heroStatusCell.backgroundColor = [MapPickerViewController liquidGlassCellBackgroundColor];
     self.heroStatusCell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    self.heroStatusSwitch = [[UISwitch alloc] init];
+    [self.heroStatusSwitch addTarget:self action:@selector(handleHeroStatusSwitchToggled:) forControlEvents:UIControlEventValueChanged];
+    self.heroStatusCell.accessoryView = self.heroStatusSwitch;
 
     self.heroStatusDot = [[UIView alloc] init];
     self.heroStatusDot.translatesAutoresizingMaskIntoConstraints = NO;
-    self.heroStatusDot.layer.cornerRadius = 8.0;
+    self.heroStatusDot.layer.cornerRadius = 7.0;
     self.heroStatusDot.backgroundColor = UIColor.systemOrangeColor;
     [self.heroStatusCell.contentView addSubview:self.heroStatusDot];
 
     self.heroStatusTitleLabel = [[UILabel alloc] init];
     self.heroStatusTitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.heroStatusTitleLabel.text = @"Spoofing Inactive";
-    self.heroStatusTitleLabel.font = [UIFont systemFontOfSize:19.0 weight:UIFontWeightBold];
+    self.heroStatusTitleLabel.font = [UIFont systemFontOfSize:18.0 weight:UIFontWeightBold];
     self.heroStatusTitleLabel.textColor = UIColor.labelColor;
     [self.heroStatusCell.contentView addSubview:self.heroStatusTitleLabel];
 
@@ -580,33 +639,25 @@ static const CGFloat kLSMapHeight = 220.0;
     self.heroStatusSubtitleLabel.lineBreakMode = NSLineBreakByWordWrapping;
     [self.heroStatusCell.contentView addSubview:self.heroStatusSubtitleLabel];
 
-    self.heroStatusSwitch = [[UISwitch alloc] init];
-    self.heroStatusSwitch.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.heroStatusSwitch addTarget:self action:@selector(handleHeroStatusSwitchToggled:) forControlEvents:UIControlEventValueChanged];
-    [self.heroStatusCell.contentView addSubview:self.heroStatusSwitch];
-
     [NSLayoutConstraint activateConstraints:@[
         [self.heroStatusDot.leadingAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.leadingAnchor constant:16.0],
         [self.heroStatusDot.centerYAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.centerYAnchor],
-        [self.heroStatusDot.widthAnchor constraintEqualToConstant:16.0],
-        [self.heroStatusDot.heightAnchor constraintEqualToConstant:16.0],
+        [self.heroStatusDot.widthAnchor constraintEqualToConstant:14.0],
+        [self.heroStatusDot.heightAnchor constraintEqualToConstant:14.0],
 
         [self.heroStatusTitleLabel.leadingAnchor constraintEqualToAnchor:self.heroStatusDot.trailingAnchor constant:12.0],
-        [self.heroStatusTitleLabel.topAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.topAnchor constant:14.0],
-        [self.heroStatusTitleLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.heroStatusSwitch.leadingAnchor constant:-12.0],
+        [self.heroStatusTitleLabel.topAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.topAnchor constant:12.0],
+        [self.heroStatusTitleLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.heroStatusCell.contentView.trailingAnchor constant:-8.0],
 
         [self.heroStatusSubtitleLabel.leadingAnchor constraintEqualToAnchor:self.heroStatusTitleLabel.leadingAnchor],
         [self.heroStatusSubtitleLabel.topAnchor constraintEqualToAnchor:self.heroStatusTitleLabel.bottomAnchor constant:3.0],
-        [self.heroStatusSubtitleLabel.bottomAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.bottomAnchor constant:-14.0],
-        [self.heroStatusSubtitleLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.heroStatusSwitch.leadingAnchor constant:-12.0],
-
-        [self.heroStatusSwitch.trailingAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.trailingAnchor constant:-16.0],
-        [self.heroStatusSwitch.centerYAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.centerYAnchor]
+        [self.heroStatusSubtitleLabel.bottomAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.bottomAnchor constant:-12.0],
+        [self.heroStatusSubtitleLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.heroStatusCell.contentView.trailingAnchor constant:-8.0]
     ]];
 
     // 1: Target Coordinate Preview & Bookmark Cell
     self.previewCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-    self.previewCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.previewCell.backgroundColor = [MapPickerViewController liquidGlassCellBackgroundColor];
     self.previewCell.selectionStyle = UITableViewCellSelectionStyleNone;
 
     UIView *previewBadge = [MapPickerViewController iconBadgeWithSymbolName:@"mappin.and.ellipse" backgroundColor:UIColor.systemRedColor];
@@ -671,7 +722,7 @@ static const CGFloat kLSMapHeight = 220.0;
 
     // 2: Heading Slider Cell
     self.headingCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    self.headingCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.headingCell.backgroundColor = [MapPickerViewController liquidGlassCellBackgroundColor];
     self.headingCell.selectionStyle = UITableViewCellSelectionStyleNone;
 
     UIView *headingBadge = [MapPickerViewController iconBadgeWithSymbolName:@"safari.fill" backgroundColor:UIColor.systemIndigoColor];
@@ -686,7 +737,7 @@ static const CGFloat kLSMapHeight = 220.0;
 
     UILabel *headingSub = [[UILabel alloc] init];
     headingSub.translatesAutoresizingMaskIntoConstraints = NO;
-    headingSub.text = @"Controls device compass orientation (0°–359°) reported to navigation apps";
+    headingSub.text = @"Facing direction (0°–359°)";
     headingSub.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightRegular];
     headingSub.textColor = UIColor.secondaryLabelColor;
     headingSub.numberOfLines = 0;
@@ -720,15 +771,15 @@ static const CGFloat kLSMapHeight = 220.0;
         [self.headingSlider.bottomAnchor constraintEqualToAnchor:self.headingCell.contentView.bottomAnchor constant:-12.0]
     ]];
 
-    // 3: Options (Fluctuation, Radius, Keep Last, Show Real)
+    // 3: Options (Fluctuation, Radius, Keep Last, Show Real, Floating Button)
     self.fluctuationCell = [self ls_createToggleCellWithBadgeSymbol:@"waveform.path"
                                                          badgeColor:UIColor.systemPurpleColor
                                                               title:@"Location Fluctuation"
-                                                           subtitle:@"Adds subtle randomized GPS drift"
-                                                            control:self.fluctuationSwitch];
+                                                            subtitle:@"Adds subtle randomized GPS drift"
+                                                             control:self.fluctuationSwitch];
 
     self.fluctuationRadiusCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    self.fluctuationRadiusCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.fluctuationRadiusCell.backgroundColor = [MapPickerViewController liquidGlassCellBackgroundColor];
     self.fluctuationRadiusCell.selectionStyle = UITableViewCellSelectionStyleNone;
 
     UIView *radiusBadge = [MapPickerViewController iconBadgeWithSymbolName:@"circle.dashed" backgroundColor:[UIColor.systemPurpleColor colorWithAlphaComponent:0.75]];
@@ -787,6 +838,16 @@ static const CGFloat kLSMapHeight = 220.0;
                                                         subtitle:@"Always use dark interface theme"
                                                          control:self.darkModeSwitch];
 
+    self.floatingButtonSwitch = [[UISwitch alloc] init];
+    self.floatingButtonSwitch.on = [[PersistenceManager shared] floatingButtonEnabled];
+    [self.floatingButtonSwitch addTarget:self action:@selector(handleFloatingButtonToggled:) forControlEvents:UIControlEventValueChanged];
+
+    self.floatingButtonCell = [self ls_createToggleCellWithBadgeSymbol:@"button.programmable"
+                                                            badgeColor:UIColor.systemTealColor
+                                                                 title:@"Floating Button"
+                                                              subtitle:@"Quick-access menu button on screen"
+                                                               control:self.floatingButtonSwitch];
+
     // 5: Action Button Cells (Apply/Update Location)
     self.applyButtonCell = [self ls_createButtonCellWithView:self.applyButton];
     self.stopButtonCell = [self ls_createButtonCellWithView:self.stopButton];
@@ -798,7 +859,7 @@ static const CGFloat kLSMapHeight = 220.0;
                                                       title:(NSString *)title
                                                   textField:(UITextField *)textField {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    cell.backgroundColor = [MapPickerViewController liquidGlassCellBackgroundColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
     UIView *badge = [MapPickerViewController iconBadgeWithSymbolName:symbol backgroundColor:color];
@@ -839,8 +900,9 @@ static const CGFloat kLSMapHeight = 220.0;
                                                subtitle:(NSString *)subtitle
                                                 control:(UIControl *)control {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-    cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    cell.backgroundColor = [MapPickerViewController liquidGlassCellBackgroundColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    cell.accessoryView = control;
 
     UIView *badge = [MapPickerViewController iconBadgeWithSymbolName:symbol backgroundColor:color];
     [cell.contentView addSubview:badge];
@@ -848,7 +910,7 @@ static const CGFloat kLSMapHeight = 220.0;
     UILabel *lbl = [[UILabel alloc] init];
     lbl.translatesAutoresizingMaskIntoConstraints = NO;
     lbl.text = title;
-    lbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
+    lbl.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightMedium];
     lbl.textColor = UIColor.labelColor;
     [cell.contentView addSubview:lbl];
 
@@ -861,24 +923,18 @@ static const CGFloat kLSMapHeight = 220.0;
     sub.lineBreakMode = NSLineBreakByWordWrapping;
     [cell.contentView addSubview:sub];
 
-    [control removeFromSuperview];
-    control.translatesAutoresizingMaskIntoConstraints = NO;
-    [cell.contentView addSubview:control];
-
     [NSLayoutConstraint activateConstraints:@[
         [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
         [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
 
         [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
         [lbl.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:10.0],
+        [lbl.trailingAnchor constraintLessThanOrEqualToAnchor:cell.contentView.trailingAnchor constant:-8.0],
 
         [sub.leadingAnchor constraintEqualToAnchor:lbl.leadingAnchor],
         [sub.topAnchor constraintEqualToAnchor:lbl.bottomAnchor constant:2.0],
         [sub.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-10.0],
-        [sub.trailingAnchor constraintLessThanOrEqualToAnchor:control.leadingAnchor constant:-8.0],
-
-        [control.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-        [control.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor]
+        [sub.trailingAnchor constraintLessThanOrEqualToAnchor:cell.contentView.trailingAnchor constant:-8.0]
     ]];
     return cell;
 }
@@ -1197,6 +1253,11 @@ static const CGFloat kLSMapHeight = 220.0;
 - (void)handleDarkModeToggled:(UISwitch *)sender {
     [PersistenceManager shared].appearancePreference = sender.isOn ? LSAppearancePreferenceDark : LSAppearancePreferenceLight;
     self.overrideUserInterfaceStyle = sender.isOn ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
+}
+
+- (void)handleFloatingButtonToggled:(UISwitch *)sender {
+    [PersistenceManager shared].floatingButtonEnabled = sender.isOn;
+    [LSOverlayManager setFloatingButtonHidden:!sender.isOn];
 }
 
 #pragma mark - Search Suggestions & Autocomplete
@@ -1566,6 +1627,8 @@ static const CGFloat kLSMapHeight = 220.0;
     store.keepLastSpoof = self.keepLastSpoofSwitch.isOn;
     store.showRealLocation = self.showRealLocationSwitch.isOn;
     store.appearancePreference = self.darkModeSwitch.isOn ? LSAppearancePreferenceDark : LSAppearancePreferenceLight;
+    store.floatingButtonEnabled = self.floatingButtonSwitch.isOn;
+    [LSOverlayManager setFloatingButtonHidden:!self.floatingButtonSwitch.isOn];
 
     [self playApplyHaptic];
     [self updateHeroStatusCell];
@@ -1721,7 +1784,7 @@ static const CGFloat kLSMapHeight = 220.0;
         case 1: return 1; // Preview & Bookmark
         case 2: return 3; // Latitude, Longitude, Altitude
         case 3: return 1; // Heading slider
-        case 4: return self.fluctuationSwitch.isOn ? 5 : 4; // Fluctuation, (Radius Slider), Keep Last, Show Real, Dark Mode
+        case 4: return self.fluctuationSwitch.isOn ? 6 : 5; // Fluctuation, (Radius Slider), Keep Last, Show Real, Dark Mode, Floating Button
         case 5: return 1; // Apply / Update Location
         default: return 0;
     }
@@ -1760,7 +1823,7 @@ static const CGFloat kLSMapHeight = 220.0;
     }
 
     if (section == 3) {
-        return @"Adjusts the compass bearing reported to Apple Maps, Google Maps, fitness trackers, and games so your facing direction matches real travel.";
+        return @"Sets your compass heading for navigation and fitness apps.";
     }
 
     return nil;
@@ -1830,11 +1893,13 @@ static const CGFloat kLSMapHeight = 220.0;
                 if (indexPath.row == 1) return self.fluctuationRadiusCell;
                 if (indexPath.row == 2) return self.keepLastSpoofCell;
                 if (indexPath.row == 3) return self.showRealLocationCell;
-                return self.darkModeCell;
+                if (indexPath.row == 4) return self.darkModeCell;
+                return self.floatingButtonCell;
             } else {
                 if (indexPath.row == 1) return self.keepLastSpoofCell;
                 if (indexPath.row == 2) return self.showRealLocationCell;
-                return self.darkModeCell;
+                if (indexPath.row == 3) return self.darkModeCell;
+                return self.floatingButtonCell;
             }
         }
 
@@ -1893,6 +1958,22 @@ static const CGFloat kLSMapHeight = 220.0;
     if (self.panelTab == LSMapPickerPanelTabSaved) {
         [self ls_bookmarksMoveFromIndexPath:sourceIndexPath toIndexPath:destinationIndexPath];
     }
+}
+
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
+    (void)indexPath;
+    if (tableView != self.tableView) {
+        return;
+    }
+
+    if (cell == self.applyButtonCell || cell == self.stopButtonCell || cell == self.cancelButtonCell) {
+        cell.backgroundColor = UIColor.clearColor;
+        cell.contentView.backgroundColor = UIColor.clearColor;
+        return;
+    }
+
+    cell.backgroundColor = [MapPickerViewController liquidGlassCellBackgroundColor];
+    cell.contentView.backgroundColor = UIColor.clearColor;
 }
 
 @end

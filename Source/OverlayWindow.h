@@ -9,6 +9,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)resetGestureTriggerState;
 + (void)setMapPickerVisible:(BOOL)visible;
 + (void)restoreMapPickerSessionState;
++ (void)setFloatingButtonHidden:(BOOL)hidden;
 
 @end
 

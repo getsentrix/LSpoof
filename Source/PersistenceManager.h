@@ -31,6 +31,8 @@ typedef NS_ENUM(NSInteger, LSAppearancePreference) {
 @property (nonatomic, assign) BOOL hasRealCoordinate;
 @property (nonatomic, assign) LSAppearancePreference appearancePreference;
 @property (nonatomic, readonly) BOOL isEffectiveDarkMode;
+@property (nonatomic, assign) BOOL floatingButtonEnabled;
+@property (nonatomic, assign) CGPoint floatingButtonPosition;
 
 - (NSArray<NSDictionary *> *)recentLocations;
 - (void)recordRecentCoordinate:(CLLocationCoordinate2D)coordinate name:(nullable NSString *)name;

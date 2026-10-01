@@ -24,9 +24,41 @@ static os_log_t ls_overlayLog = NULL;
 #define LSAssertMainThread()
 #endif
 
+@class LSFloatingOverlayWindow;
+
 @interface LSOverlayManager ()
 + (instancetype)shared;
 @property (nonatomic, assign) BOOL installed;
+@property (nonatomic, strong, nullable) LSFloatingOverlayWindow *floatingWindow;
+@property (nonatomic, strong, nullable) UIButton *floatingButton;
+- (void)setupFloatingButtonIfNeeded;
+@end
+
+@interface LSFloatingOverlayWindow : UIWindow
+@property (nonatomic, weak, nullable) UIButton *floatingButton;
+@end
+
+@implementation LSFloatingOverlayWindow
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *hitView = [super hitTest:point withEvent:event];
+    if (hitView == self.floatingButton || [hitView isDescendantOfView:self.floatingButton]) {
+        return hitView;
+    }
+    return nil;
+}
+
+@end
+
+@interface LSFloatingRootViewController : UIViewController
+@end
+
+@implementation LSFloatingRootViewController
+
+- (BOOL)prefersStatusBarHidden {
+    return NO;
+}
+
 @end
 
 static void LSUpdateThreeFingerHoldForEvent(UIEvent *event);
@@ -226,10 +258,25 @@ static UIViewController *LSHostTopViewController(void) {
     LSCancelThreeFingerHoldTimer();
 }
 
++ (void)setFloatingButtonHidden:(BOOL)hidden {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        LSOverlayManager *mgr = [self shared];
+        if (mgr.floatingButton) {
+            mgr.floatingButton.hidden = hidden;
+        }
+    });
+}
+
 + (void)setMapPickerVisible:(BOOL)visible {
     LSAssertMainThread();
     ls_mapPickerVisible = visible;
     LSCancelThreeFingerHoldTimer();
+    LSOverlayManager *mgr = [self shared];
+    if (mgr.floatingButton && [PersistenceManager shared].floatingButtonEnabled) {
+        [UIView animateWithDuration:0.2 animations:^{
+            mgr.floatingButton.alpha = visible ? 0.0 : 1.0;
+        }];
+    }
 }
 
 + (void)restoreMapPickerSessionState {
@@ -242,6 +289,128 @@ static UIViewController *LSHostTopViewController(void) {
 
 + (void)installSendEventHooks {
     LSSwizzleSendEventOnClass(LSSendEventHookTargetClass(), @selector(lsp_applicationSendEvent:));
+}
+
+- (void)setupFloatingButtonIfNeeded {
+    if (self.floatingWindow && self.floatingButton) {
+        return;
+    }
+
+    UIApplication *app = UIApplication.sharedApplication;
+    UIWindowScene *activeScene = nil;
+    if (@available(iOS 13.0, *)) {
+        for (UIScene *scene in app.connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]]) {
+                UIWindowScene *ws = (UIWindowScene *)scene;
+                if (ws.activationState == UISceneActivationStateForegroundActive) {
+                    activeScene = ws;
+                    break;
+                }
+                if (!activeScene) {
+                    activeScene = ws;
+                }
+            }
+        }
+    }
+
+    LSFloatingOverlayWindow *window = nil;
+    if (@available(iOS 13.0, *)) {
+        if (activeScene) {
+            window = [[LSFloatingOverlayWindow alloc] initWithWindowScene:activeScene];
+        }
+    }
+    if (!window) {
+        window = [[LSFloatingOverlayWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
+    }
+
+    window.windowLevel = UIWindowLevelAlert + 100.0;
+    window.backgroundColor = UIColor.clearColor;
+    window.rootViewController = [[LSFloatingRootViewController alloc] init];
+    window.hidden = NO;
+
+    // Create circular white floating button with purple location icon matching Life360 UI buttons
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    button.frame = CGRectMake(0.0, 0.0, 44.0, 44.0);
+    button.backgroundColor = UIColor.whiteColor;
+    button.layer.cornerRadius = 22.0;
+    if (@available(iOS 13.0, *)) {
+        button.layer.cornerCurve = kCACornerCurveContinuous;
+    }
+    button.layer.shadowColor = UIColor.blackColor.CGColor;
+    button.layer.shadowOffset = CGSizeMake(0.0, 2.0);
+    button.layer.shadowOpacity = 0.16;
+    button.layer.shadowRadius = 4.0;
+    button.layer.masksToBounds = NO;
+
+    UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:19.0 weight:UIFontWeightBold];
+    UIImage *icon = [UIImage systemImageNamed:@"location.fill" withConfiguration:config];
+    if (!icon) {
+        icon = [UIImage systemImageNamed:@"mappin.circle.fill" withConfiguration:config];
+    }
+    if (!icon) {
+        icon = [UIImage systemImageNamed:@"circle.fill" withConfiguration:config];
+    }
+    [button setImage:icon forState:UIControlStateNormal];
+    // Vibrant purple matching Life360 settings button
+    button.tintColor = [UIColor colorWithRed:0.43 green:0.25 blue:0.85 alpha:1.0];
+
+    [button addTarget:self action:@selector(handleFloatingButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleFloatingButtonPan:)];
+    [button addGestureRecognizer:pan];
+
+    CGPoint pos = [PersistenceManager shared].floatingButtonPosition;
+    if (pos.x <= 0 || pos.y <= 0) {
+        // Position right next to settings button (Settings is at x≈20, y≈56)
+        pos = CGPointMake(74.0, 56.0);
+    }
+    button.center = pos;
+
+    [window.rootViewController.view addSubview:button];
+    window.floatingButton = button;
+    self.floatingButton = button;
+    self.floatingWindow = window;
+
+    BOOL enabled = [PersistenceManager shared].floatingButtonEnabled;
+    self.floatingButton.hidden = !enabled;
+}
+
+- (void)handleFloatingButtonTapped:(UIButton *)sender {
+    UIImpactFeedbackGenerator *impact = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [impact impactOccurred];
+
+    [UIView animateWithDuration:0.1 animations:^{
+        sender.transform = CGAffineTransformMakeScale(0.90, 0.90);
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.15 animations:^{
+            sender.transform = CGAffineTransformIdentity;
+        }];
+    }];
+
+    [LSOverlayManager presentMapPicker];
+}
+
+- (void)handleFloatingButtonPan:(UIPanGestureRecognizer *)gesture {
+    CGPoint translation = [gesture translationInView:self.floatingWindow];
+    CGPoint center = self.floatingButton.center;
+    center.x += translation.x;
+    center.y += translation.y;
+    self.floatingButton.center = center;
+    [gesture setTranslation:CGPointZero inView:self.floatingWindow];
+
+    if (gesture.state == UIGestureRecognizerStateEnded || gesture.state == UIGestureRecognizerStateCancelled) {
+        CGRect bounds = self.floatingWindow.bounds;
+        CGFloat minX = 26.0;
+        CGFloat maxX = bounds.size.width - 26.0;
+        CGFloat minY = 50.0;
+        CGFloat maxY = bounds.size.height - 50.0;
+        CGPoint clamped = self.floatingButton.center;
+        clamped.x = MAX(minX, MIN(maxX, clamped.x));
+        clamped.y = MAX(minY, MIN(maxY, clamped.y));
+        [UIView animateWithDuration:0.25 delay:0 usingSpringWithDamping:0.8 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            self.floatingButton.center = clamped;
+        } completion:nil];
+        [PersistenceManager shared].floatingButtonPosition = clamped;
+    }
 }
 
 - (void)installIfNeeded {
@@ -257,6 +426,9 @@ static UIViewController *LSHostTopViewController(void) {
     }
 
     [LSOverlayManager installSendEventHooks];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self setupFloatingButtonIfNeeded];
+    });
 
     // Singleton retains observers for process lifetime.
     [[NSNotificationCenter defaultCenter] addObserver:self
@@ -278,11 +450,13 @@ static UIViewController *LSHostTopViewController(void) {
 - (void)handleApplicationDidFinishLaunching:(NSNotification *)notification {
     (void)notification;
     [LSOverlayManager installSendEventHooks];
+    [self setupFloatingButtonIfNeeded];
 }
 
 - (void)handleApplicationDidBecomeActive:(NSNotification *)notification {
     (void)notification;
     [LSOverlayManager installSendEventHooks];
+    [self setupFloatingButtonIfNeeded];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [LSUpdateChecker checkForUpdatesAutomatically];
     });

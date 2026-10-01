@@ -103,6 +103,8 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UITableViewCell *fluctuationRadiusCell;
 @property (nonatomic, strong) UITableViewCell *keepLastSpoofCell;
 @property (nonatomic, strong) UITableViewCell *showRealLocationCell;
+@property (nonatomic, strong) UITableViewCell *floatingButtonCell;
+@property (nonatomic, strong) UISwitch *floatingButtonSwitch;
 @property (nonatomic, strong) UITableViewCell *applyButtonCell;
 @property (nonatomic, strong) UITableViewCell *stopButtonCell;
 @property (nonatomic, strong) UITableViewCell *cancelButtonCell;

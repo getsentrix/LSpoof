@@ -14,6 +14,9 @@ static NSString * const kKeyFluctuationRadius = @"LSFluctuationRadius";
 static NSString * const kKeyKeepLastSpoof = @"LSKeepLastSpoof";
 static NSString * const kKeyShowRealLocation = @"LSShowRealLocation";
 static NSString * const kKeyAppearancePreference = @"LSAppearancePreference";
+static NSString * const kKeyFloatingButtonEnabled = @"LSFloatingButtonEnabled";
+static NSString * const kKeyFloatingButtonX = @"LSFloatingButtonX";
+static NSString * const kKeyFloatingButtonY = @"LSFloatingButtonY";
 static NSString * const kKeyRecentLocations = @"LSRecentLocations";
 static NSString * const kRecentLatitudeKey = @"LSRecentLat";
 static NSString * const kRecentLongitudeKey = @"LSRecentLon";
@@ -36,13 +39,15 @@ static const NSUInteger kLSMaxRecentLocations = 5;
 @property (nonatomic, assign) BOOL cachedKeepLastSpoof;
 @property (nonatomic, assign) BOOL cachedShowRealLocation;
 @property (nonatomic, assign) NSInteger cachedAppearancePreference;
+@property (nonatomic, assign) BOOL cachedFloatingButtonEnabled;
+@property (nonatomic, assign) CGPoint cachedFloatingButtonPosition;
 @property (nonatomic, strong) NSMutableArray<NSDictionary *> *cachedRecents;
 @property (nonatomic, assign) BOOL recentsLoaded;
 @end
 
 @implementation PersistenceManager
 
-@dynamic simulationWasActive, altitude, heading, fluctuationEnabled, fluctuationRadius, keepLastSpoof, showRealLocation, appearancePreference;
+@dynamic simulationWasActive, altitude, heading, fluctuationEnabled, fluctuationRadius, keepLastSpoof, showRealLocation, appearancePreference, floatingButtonEnabled, floatingButtonPosition;
 
 + (instancetype)shared {
     static PersistenceManager *instance = nil;
@@ -108,6 +113,20 @@ static const NSUInteger kLSMaxRecentLocations = 5;
     self.cachedShowRealLocation = [self.defaults boolForKey:kKeyShowRealLocation];
     if (self.cachedFluctuationRadius <= 0.0) {
         self.cachedFluctuationRadius = 50.0;
+    }
+
+    if ([self.defaults objectForKey:kKeyFloatingButtonEnabled] != nil) {
+        self.cachedFloatingButtonEnabled = [self.defaults boolForKey:kKeyFloatingButtonEnabled];
+    } else {
+        self.cachedFloatingButtonEnabled = YES;
+    }
+
+    if ([self.defaults objectForKey:kKeyFloatingButtonX] != nil &&
+        [self.defaults objectForKey:kKeyFloatingButtonY] != nil) {
+        self.cachedFloatingButtonPosition = CGPointMake([self.defaults doubleForKey:kKeyFloatingButtonX],
+                                                        [self.defaults doubleForKey:kKeyFloatingButtonY]);
+    } else {
+        self.cachedFloatingButtonPosition = CGPointMake(74.0, 56.0);
     }
 
     if ([self.defaults objectForKey:kKeyLatitude] != nil &&
@@ -271,6 +290,35 @@ static const NSUInteger kLSMaxRecentLocations = 5;
     os_unfair_lock_lock(&_lock);
     self.cachedAppearancePreference = preference;
     [self.defaults setInteger:preference forKey:kKeyAppearancePreference];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (BOOL)floatingButtonEnabled {
+    os_unfair_lock_lock(&_lock);
+    BOOL enabled = self.cachedFloatingButtonEnabled;
+    os_unfair_lock_unlock(&_lock);
+    return enabled;
+}
+
+- (void)setFloatingButtonEnabled:(BOOL)floatingButtonEnabled {
+    os_unfair_lock_lock(&_lock);
+    self.cachedFloatingButtonEnabled = floatingButtonEnabled;
+    [self.defaults setBool:floatingButtonEnabled forKey:kKeyFloatingButtonEnabled];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (CGPoint)floatingButtonPosition {
+    os_unfair_lock_lock(&_lock);
+    CGPoint pos = self.cachedFloatingButtonPosition;
+    os_unfair_lock_unlock(&_lock);
+    return pos;
+}
+
+- (void)setFloatingButtonPosition:(CGPoint)position {
+    os_unfair_lock_lock(&_lock);
+    self.cachedFloatingButtonPosition = position;
+    [self.defaults setDouble:position.x forKey:kKeyFloatingButtonX];
+    [self.defaults setDouble:position.y forKey:kKeyFloatingButtonY];
     os_unfair_lock_unlock(&_lock);
 }
 

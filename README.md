@@ -22,13 +22,13 @@
 
 ---
 
-## ⚡ What's New in v1.1.5
+## ⚡ What's New in v1.1.6
 
-- **Staged Settings**: Nothing changes on device GPS until you tap **Save Settings**.
-- **True iOS Liquid Glass UI**: Native UIKit styling with continuous curves and zero lag.
-- **Mini Map Preview on Saved Tab**: Mini map stays visible when viewing Bookmarks and Recents, jumping straight to selected pins.
-- **Heading & Bearing Guide**: In-app explanation for compass direction in navigation and fitness apps.
-- **Refined Route & Button Padding**: Generous 52pt button heights and dedicated card sections for route planning.
+- **True Native Liquid Glass UI**: Real `SystemUltraThinMaterial` blur backdrop with translucent card cells and subtle borders.
+- **On-Screen Floating Menu Button**: Circular button right next to the settings gear for instant one-tap access without gesture conflicts. Draggable to any screen edge with saved position.
+- **Header & Title Padding**: Fixed title crowding against sheet grabber handle.
+- **Segmented Control & Switch Polish**: Clean layout preventing label overlap, segmented text truncation ("Saved"), or right-edge switch clipping.
+- **Simplified Copy**: Straightforward heading and compass descriptions without wordy text.
 
 ---
 
@@ -58,9 +58,9 @@ Because LSpoof is a tweak library (`.dylib`) rather than a standalone applicatio
 ## 🎮 How to Open the Menu
 
 1. Launch your sideloaded app with `LocationSpoofer.dylib` injected.
-2. **Press and hold three fingers anywhere on the screen for 0.8 seconds.**
-3. The Location Spoofer menu opens instantly.
-4. Set your target location and tap **Apply**.
+2. **Tap the floating menu button** on screen (placed right next to the settings gear). You can drag it anywhere on screen or toggle it off in options.
+3. *Alternative gesture:* Press and hold three fingers anywhere on the screen for 0.8 seconds.
+4. Set your target location and tap **Save Settings**.
 
 ---
 
