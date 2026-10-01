@@ -1,7 +1,14 @@
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 #import <CoreLocation/CoreLocation.h>
 
 NS_ASSUME_NONNULL_BEGIN
+
+typedef NS_ENUM(NSInteger, LSAppearancePreference) {
+    LSAppearancePreferenceSystem = 0,
+    LSAppearancePreferenceDark = 1,
+    LSAppearancePreferenceLight = 2
+};
 
 @interface PersistenceManager : NSObject
 
@@ -22,7 +29,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) BOOL showRealLocation;
 @property (nonatomic, assign) CLLocationCoordinate2D lastRealCoordinate;
 @property (nonatomic, assign) BOOL hasRealCoordinate;
-@property (nonatomic, assign) NSInteger appearancePreference; // 0 = System, 1 = Dark, 2 = Light
+@property (nonatomic, assign) LSAppearancePreference appearancePreference;
 @property (nonatomic, readonly) BOOL isEffectiveDarkMode;
 
 - (NSArray<NSDictionary *> *)recentLocations;

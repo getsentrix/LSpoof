@@ -260,14 +260,14 @@ static const NSUInteger kLSMaxRecentLocations = 5;
     os_unfair_lock_unlock(&_lock);
 }
 
-- (NSInteger)appearancePreference {
+- (LSAppearancePreference)appearancePreference {
     os_unfair_lock_lock(&_lock);
-    NSInteger pref = self.cachedAppearancePreference;
+    LSAppearancePreference pref = (LSAppearancePreference)self.cachedAppearancePreference;
     os_unfair_lock_unlock(&_lock);
     return pref;
 }
 
-- (void)setAppearancePreference:(NSInteger)preference {
+- (void)setAppearancePreference:(LSAppearancePreference)preference {
     os_unfair_lock_lock(&_lock);
     self.cachedAppearancePreference = preference;
     [self.defaults setInteger:preference forKey:kKeyAppearancePreference];
@@ -275,9 +275,9 @@ static const NSUInteger kLSMaxRecentLocations = 5;
 }
 
 - (BOOL)isEffectiveDarkMode {
-    NSInteger pref = self.appearancePreference;
-    if (pref == 1) return YES;
-    if (pref == 2) return NO;
+    LSAppearancePreference pref = self.appearancePreference;
+    if (pref == LSAppearancePreferenceDark) return YES;
+    if (pref == LSAppearancePreferenceLight) return NO;
     if (@available(iOS 13.0, *)) {
         return UIScreen.mainScreen.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
     }
