@@ -12,13 +12,13 @@
       "developerName": "getsentrix",
       "subtitle": "Universal GPS Spoofer for iOS",
       "version": "1.1.3",
-      "versionDate": "2026-10-01T03:28:26Z",
-      "versionDescription": "LSpoof v1.1.2 - Hero Status Indicator, Current Location & Drift Slider",
-      "downloadURL": "https://github.com/getsentrix/LSpoof/releases/download/v1.1.2/LocationSpoofer.dylib",
+      "versionDate": "2026-10-01T03:35:07Z",
+      "versionDescription": "LSpoof v1.1.3 - In-App Auto Update Checker & Dylib Notification",
+      "downloadURL": "https://github.com/getsentrix/LSpoof/releases/download/v1.1.3/LocationSpoofer.dylib",
       "localizedDescription": "Universal GPS, altitude, and heading spoofer for sideloaded iOS apps. Features draggable pins, real-time route simulation along Apple Maps road networks, randomized GPS drift fluctuation, and a native iOS 16+ Inset Grouped interface.",
       "iconURL": "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png",
       "tintColor": "007AFF",
-      "size": 486440,
+      "size": 491352,
       "screenshotURLs": [
         "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/preview-static.png"
       ]
@@ -29,7 +29,7 @@
       "title": "LSpoof v1.1.3 Released",
       "identifier": "lspoof-release-1.1.3",
       "caption": "Modern Inset Grouped UI, Apple SF Symbols & Stability Polish",
-      "date": "2026-10-01T03:28:26Z",
+      "date": "2026-10-01T03:35:07Z",
       "tintColor": "007AFF",
       "imageURL": "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png",
       "url": "https://github.com/getsentrix/LSpoof/releases/tag/v1.1.3"
