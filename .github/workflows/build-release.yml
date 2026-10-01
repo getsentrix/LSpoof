@@ -93,7 +93,7 @@ jobs:
             gh release create "$TAG" LocationSpoofer.dylib \
               --repo getsentrix/LSpoof \
               --title "$TAG - Dark Mode, 3-Tab Layout & UI Refinements" \
-              --notes-file notes.md
+              --notes-file notes.md || gh release upload "$TAG" LocationSpoofer.dylib --repo getsentrix/LSpoof --clobber
           }
 
       - name: Update AltStore Source
