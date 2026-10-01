@@ -13,6 +13,7 @@ static NSString * const kKeyFluctuationEnabled = @"LSFluctuationEnabled";
 static NSString * const kKeyFluctuationRadius = @"LSFluctuationRadius";
 static NSString * const kKeyKeepLastSpoof = @"LSKeepLastSpoof";
 static NSString * const kKeyShowRealLocation = @"LSShowRealLocation";
+static NSString * const kKeyAppearancePreference = @"LSAppearancePreference";
 static NSString * const kKeyRecentLocations = @"LSRecentLocations";
 static NSString * const kRecentLatitudeKey = @"LSRecentLat";
 static NSString * const kRecentLongitudeKey = @"LSRecentLon";
@@ -34,13 +35,14 @@ static const NSUInteger kLSMaxRecentLocations = 5;
 @property (nonatomic, assign) double cachedFluctuationRadius;
 @property (nonatomic, assign) BOOL cachedKeepLastSpoof;
 @property (nonatomic, assign) BOOL cachedShowRealLocation;
+@property (nonatomic, assign) NSInteger cachedAppearancePreference;
 @property (nonatomic, strong) NSMutableArray<NSDictionary *> *cachedRecents;
 @property (nonatomic, assign) BOOL recentsLoaded;
 @end
 
 @implementation PersistenceManager
 
-@dynamic simulationWasActive, altitude, heading, fluctuationEnabled, fluctuationRadius, keepLastSpoof, showRealLocation;
+@dynamic simulationWasActive, altitude, heading, fluctuationEnabled, fluctuationRadius, keepLastSpoof, showRealLocation, appearancePreference;
 
 + (instancetype)shared {
     static PersistenceManager *instance = nil;
@@ -65,6 +67,7 @@ static const NSUInteger kLSMaxRecentLocations = 5;
         _cachedFluctuationRadius = 50.0;
         _cachedKeepLastSpoof = NO;
         _cachedShowRealLocation = NO;
+        _cachedAppearancePreference = [_defaults integerForKey:kKeyAppearancePreference];
         _lastRealCoordinate = kCLLocationCoordinate2DInvalid;
         _hasRealCoordinate = NO;
         _cachedRecents = [NSMutableArray array];
@@ -255,6 +258,30 @@ static const NSUInteger kLSMaxRecentLocations = 5;
     self.cachedShowRealLocation = showRealLocation;
     [self.defaults setBool:showRealLocation forKey:kKeyShowRealLocation];
     os_unfair_lock_unlock(&_lock);
+}
+
+- (NSInteger)appearancePreference {
+    os_unfair_lock_lock(&_lock);
+    NSInteger pref = self.cachedAppearancePreference;
+    os_unfair_lock_unlock(&_lock);
+    return pref;
+}
+
+- (void)setAppearancePreference:(NSInteger)preference {
+    os_unfair_lock_lock(&_lock);
+    self.cachedAppearancePreference = preference;
+    [self.defaults setInteger:preference forKey:kKeyAppearancePreference];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (BOOL)isEffectiveDarkMode {
+    NSInteger pref = self.appearancePreference;
+    if (pref == 1) return YES;
+    if (pref == 2) return NO;
+    if (@available(iOS 13.0, *)) {
+        return UIScreen.mainScreen.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+    }
+    return NO;
 }
 
 - (NSArray<NSDictionary *> *)recentLocations {

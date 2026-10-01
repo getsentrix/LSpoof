@@ -1,6 +1,7 @@
 #import "OverlayWindow.h"
 #import "LocationSpoofer.h"
 #import "MapPickerViewController.h"
+#import "PersistenceManager.h"
 #import "LSHooking.h"
 #import "LSUpdateChecker.h"
 
@@ -315,6 +316,11 @@ static UIViewController *LSHostTopViewController(void) {
 
     MapPickerViewController *mapPicker = [[MapPickerViewController alloc] init];
     mapPicker.modalPresentationStyle = UIModalPresentationPageSheet;
+
+    if (@available(iOS 13.0, *)) {
+        BOOL isDark = [[PersistenceManager shared] isEffectiveDarkMode];
+        mapPicker.overrideUserInterfaceStyle = isDark ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
+    }
 
     if (@available(iOS 15.0, *)) {
         UISheetPresentationController *sheet = mapPicker.sheetPresentationController;

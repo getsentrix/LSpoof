@@ -574,6 +574,8 @@
     }
 
     self.coordinateMode = LSMapPickerCoordinateModeRoute;
+    self.panelTab = LSMapPickerPanelTabRoute;
+    self.panelTabSegment.selectedSegmentIndex = 1;
     self.coordinateModeSegment.selectedSegmentIndex = LSMapPickerCoordinateModeRoute;
     self.mapHintLabel.text = @"";
 

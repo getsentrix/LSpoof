@@ -22,6 +22,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) BOOL showRealLocation;
 @property (nonatomic, assign) CLLocationCoordinate2D lastRealCoordinate;
 @property (nonatomic, assign) BOOL hasRealCoordinate;
+@property (nonatomic, assign) NSInteger appearancePreference; // 0 = System, 1 = Dark, 2 = Light
+@property (nonatomic, readonly) BOOL isEffectiveDarkMode;
 
 - (NSArray<NSDictionary *> *)recentLocations;
 - (void)recordRecentCoordinate:(CLLocationCoordinate2D)coordinate name:(nullable NSString *)name;

@@ -22,15 +22,14 @@
 
 ---
 
-## ⚡ What's New in v1.1.3
+## ⚡ What's New in v1.1.4
 
-- **In-App Auto Update Checker**: The dylib automatically checks GitHub Releases on launch and displays an alert popup whenever a new version is available, with a direct 1-tap download link.
-- **Manual Update Check**: Interactive `LSpoof v1.1.3 · Check for Updates` button in the spoofer menu footer.
-- **Auto Current Location**: The map preview automatically centers on your current physical location when opened instead of default California coordinates.
-- **Hero Status Indicator**: Prominent Section 0 status card with a glowing indicator dot and instant Active/Inactive toggle switch.
-- **Saved Bookmarks on Top**: Saved bookmarks now appear above Recents for instant access.
-- **Recognizable Place Names**: Recents show reverse-geocoded place names and street addresses instead of generic coordinates.
-- **Drift Slider**: Smooth continuous slider (5m–150m) replaces numeric text input for natural GPS fluctuation.
+- **Dark Mode Support**: New toggle in options forces dark styling, fixing host apps (like LiveContainer) that forced light mode.
+- **Unified 3-Tab Bar**: Consolidated into three clear tabs: `[Location | Route | Saved]`.
+- **Collapsing Map for Bookmarks**: Switching to the Saved tab collapses the map and search bar completely so your bookmarks and recent spots take up the full screen.
+- **Cleaned Up Controls**: Removed duplicate status badges and redundant buttons. The top active switch turns spoofing on or off instantly, and one clean button updates your spot.
+- **Fixed Recent Names**: Recent locations now show "Pinned Location" with clean coordinates until reverse lookup finds the real address or landmark.
+- **No Text Cutoff**: Subtitles now wrap cleanly on smaller screens without being cut off.
 
 ---
 

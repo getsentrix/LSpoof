@@ -17,46 +17,68 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
 }
 
 - (void)updatePanelTabVisibility {
-    BOOL mapTab = (self.panelTab == LSMapPickerPanelTabMap);
+    BOOL isSaved = (self.panelTab == LSMapPickerPanelTabSaved);
+    BOOL isRoute = (self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute);
+    BOOL isLocation = !isSaved && !isRoute;
 
-    if (mapTab) {
+    if (isLocation) {
         self.searchBar.hidden = NO;
-        self.coordinateModeSegment.hidden = NO;
+        self.mapContainer.hidden = NO;
+    } else if (isRoute) {
+        self.mapContainer.hidden = NO;
     }
 
     [UIView animateWithDuration:0.25 animations:^{
-        if (mapTab) {
-            self.searchBarHeightConstraint.constant = 48.0;
-            self.searchBarBottomConstraint.constant = 6.0;
-            self.coordinateModeHeightConstraint.constant = 32.0;
-            self.coordinateModeBottomConstraint.constant = -8.0;
+        if (isLocation) {
+            self.searchBarHeightConstraint.constant = 44.0;
+            self.searchBarBottomConstraint.constant = 8.0;
+            self.mapHeightConstraint.constant = 220.0;
             self.searchBar.alpha = 1.0;
-            self.coordinateModeSegment.alpha = 1.0;
-        } else {
+            self.mapContainer.alpha = 1.0;
+        } else if (isRoute) {
             self.searchBarHeightConstraint.constant = 0.0;
             self.searchBarBottomConstraint.constant = 0.0;
-            self.coordinateModeHeightConstraint.constant = 0.0;
-            self.coordinateModeBottomConstraint.constant = 0.0;
+            self.mapHeightConstraint.constant = 220.0;
             self.searchBar.alpha = 0.0;
-            self.coordinateModeSegment.alpha = 0.0;
+            self.mapContainer.alpha = 1.0;
+        } else {
+            // Saved tab: collapse both search bar and map completely
+            self.searchBarHeightConstraint.constant = 0.0;
+            self.searchBarBottomConstraint.constant = 0.0;
+            self.mapHeightConstraint.constant = 0.0;
+            self.searchBar.alpha = 0.0;
+            self.mapContainer.alpha = 0.0;
         }
         [self ls_updateTableHeaderLayout];
     } completion:^(BOOL finished) {
         (void)finished;
-        self.searchBar.hidden = !mapTab;
-        self.coordinateModeSegment.hidden = !mapTab;
+        self.searchBar.hidden = !isLocation;
+        self.mapContainer.hidden = isSaved;
         [self ls_updateTableHeaderLayout];
     }];
 
-    if (mapTab) {
-        [self updateCoordinateModeVisibility];
-    } else {
+    if (isSaved) {
         [self.tableView reloadData];
+    } else {
+        [self updateCoordinateModeVisibility];
     }
 }
 
 - (void)handlePanelTabChanged:(UISegmentedControl *)sender {
-    self.panelTab = (LSMapPickerPanelTab)sender.selectedSegmentIndex;
+    switch (sender.selectedSegmentIndex) {
+        case 0:
+            self.panelTab = LSMapPickerPanelTabLocation;
+            self.coordinateMode = LSMapPickerCoordinateModeStatic;
+            break;
+        case 1:
+            self.panelTab = LSMapPickerPanelTabRoute;
+            self.coordinateMode = LSMapPickerCoordinateModeRoute;
+            break;
+        case 2:
+        default:
+            self.panelTab = LSMapPickerPanelTabSaved;
+            break;
+    }
     [self updatePanelTabVisibility];
 }
 
@@ -205,7 +227,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
                         }
                     }
                 }];
-                title = [NSString stringWithFormat:@"%.4f, %.4f", coordinate.latitude, coordinate.longitude];
+                title = @"Pinned Location";
             }
         }
 
@@ -285,9 +307,10 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         return;
     }
 
-    // Switch back to Map tab and center pin at chosen coordinate
-    self.panelTab = LSMapPickerPanelTabMap;
-    self.panelTabSegment.selectedSegmentIndex = LSMapPickerPanelTabMap;
+    // Switch back to Location tab and center pin at chosen coordinate
+    self.panelTab = LSMapPickerPanelTabLocation;
+    self.coordinateMode = LSMapPickerCoordinateModeStatic;
+    self.panelTabSegment.selectedSegmentIndex = 0;
     [self updatePanelTabVisibility];
     [self movePinToCoordinate:coordinate animated:YES];
 }

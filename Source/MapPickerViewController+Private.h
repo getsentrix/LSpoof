@@ -6,8 +6,11 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef NS_ENUM(NSInteger, LSMapPickerPanelTab) {
+    LSMapPickerPanelTabLocation = 0,
+    LSMapPickerPanelTabRoute = 1,
+    LSMapPickerPanelTabSaved = 2,
     LSMapPickerPanelTabMap = 0,
-    LSMapPickerPanelTabBookmarks = 1
+    LSMapPickerPanelTabBookmarks = 2
 };
 
 typedef NS_ENUM(NSInteger, LSMapPickerCoordinateMode) {
@@ -67,6 +70,9 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UILabel *fluctuationRadiusLabel;
 @property (nonatomic, strong) UISwitch *keepLastSpoofSwitch;
 @property (nonatomic, strong) UISwitch *showRealLocationSwitch;
+@property (nonatomic, strong) UISwitch *darkModeSwitch;
+@property (nonatomic, strong) UITableViewCell *darkModeCell;
+@property (nonatomic, strong) NSLayoutConstraint *mapHeightConstraint;
 
 @property (nonatomic, strong) UITextField *latitudeField;
 @property (nonatomic, strong) UITextField *longitudeField;
@@ -164,6 +170,7 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 - (void)handleHeroStatusSwitchToggled:(UISwitch *)sender;
 - (void)handleFluctuationRadiusSliderChanged:(UISlider *)sender;
 - (void)handleCheckForUpdatesTapped;
+- (void)handleDarkModeToggled:(UISwitch *)sender;
 - (void)ls_updateTableHeaderLayout;
 
 @end

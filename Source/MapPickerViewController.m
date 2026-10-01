@@ -246,44 +246,6 @@ static const CGFloat kLSMapHeight = 220.0;
     [self.closeButton addTarget:self action:@selector(handleCancel) forControlEvents:UIControlEventTouchUpInside];
     [self.headerView addSubview:self.closeButton];
 
-    // Status pill with collapsing stack view
-    self.statusPill = [[UIView alloc] init];
-    self.statusPill.translatesAutoresizingMaskIntoConstraints = NO;
-    self.statusPill.backgroundColor = [UIColor.tertiarySystemFillColor colorWithAlphaComponent:0.9];
-    self.statusPill.layer.cornerRadius = 14.0;
-    self.statusPill.layer.cornerCurve = kCACornerCurveContinuous;
-    self.statusPill.userInteractionEnabled = YES;
-    [self.headerView addSubview:self.statusPill];
-
-    self.statusDot = [[UIView alloc] init];
-    self.statusDot.translatesAutoresizingMaskIntoConstraints = NO;
-    self.statusDot.layer.cornerRadius = 4.0;
-    self.statusDot.backgroundColor = UIColor.systemOrangeColor;
-
-    self.statusLabel = [[UILabel alloc] init];
-    self.statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.statusLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightSemibold];
-    self.statusLabel.textColor = UIColor.secondaryLabelColor;
-
-    self.pillStopLabel = [[UILabel alloc] init];
-    self.pillStopLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.pillStopLabel.text = @"Stop";
-    self.pillStopLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightBold];
-    self.pillStopLabel.textColor = UIColor.systemRedColor;
-    self.pillStopLabel.hidden = YES;
-
-    self.statusStackView = [[UIStackView alloc] initWithArrangedSubviews:@[self.statusDot, self.statusLabel, self.pillStopLabel]];
-    self.statusStackView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.statusStackView.axis = UILayoutConstraintAxisHorizontal;
-    self.statusStackView.alignment = UIStackViewAlignmentCenter;
-    self.statusStackView.spacing = 6.0;
-    self.statusStackView.layoutMarginsRelativeArrangement = YES;
-    self.statusStackView.layoutMargins = UIEdgeInsetsMake(6.0, 10.0, 6.0, 12.0);
-    [self.statusPill addSubview:self.statusStackView];
-
-    UITapGestureRecognizer *pillTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleStatusPillTapped)];
-    [self.statusPill addGestureRecognizer:pillTap];
-
     // Search bar
     self.searchBar = [[UISearchBar alloc] init];
     self.searchBar.translatesAutoresizingMaskIntoConstraints = NO;
@@ -297,7 +259,7 @@ static const CGFloat kLSMapHeight = 220.0;
     UITextField *tf = self.searchBar.searchTextField;
     tf.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightMedium];
     tf.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-    tf.layer.cornerRadius = 12.0;
+    tf.layer.cornerRadius = 10.0;
     tf.clipsToBounds = YES;
     [tableHeader addSubview:self.searchBar];
 
@@ -377,28 +339,24 @@ static const CGFloat kLSMapHeight = 220.0;
     [self.suggestionsTableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"LSSearchSuggestionCell"];
     [self.suggestionsPanel addSubview:self.suggestionsTableView];
 
-    // Tab segment: [Map | Bookmarks]
-    self.panelTabSegment = [[UISegmentedControl alloc] initWithItems:@[@"Map", @"Bookmarks"]];
+    // Unified 3-Mode Segment: [Location | Route | Saved]
+    self.panelTabSegment = [[UISegmentedControl alloc] initWithItems:@[@"Location", @"Route", @"Saved"]];
     self.panelTabSegment.translatesAutoresizingMaskIntoConstraints = NO;
-    self.panelTabSegment.selectedSegmentIndex = LSMapPickerPanelTabMap;
+    self.panelTabSegment.selectedSegmentIndex = 0;
     [self.panelTabSegment addTarget:self action:@selector(handlePanelTabChanged:) forControlEvents:UIControlEventValueChanged];
     [tableHeader addSubview:self.panelTabSegment];
 
-    // Mode segment: [Static | Route]
     self.coordinateModeSegment = [[UISegmentedControl alloc] initWithItems:@[@"Static", @"Route"]];
-    self.coordinateModeSegment.translatesAutoresizingMaskIntoConstraints = NO;
-    self.coordinateModeSegment.selectedSegmentIndex = LSMapPickerCoordinateModeStatic;
-    [self.coordinateModeSegment addTarget:self action:@selector(handleCoordinateModeChanged:) forControlEvents:UIControlEventValueChanged];
-    [tableHeader addSubview:self.coordinateModeSegment];
 
     // Header layout constraints
-    self.searchBarHeightConstraint = [self.searchBar.heightAnchor constraintEqualToConstant:48.0];
-    self.searchBarBottomConstraint = [self.mapContainer.topAnchor constraintEqualToAnchor:self.searchBar.bottomAnchor constant:6.0];
-    self.coordinateModeHeightConstraint = [self.coordinateModeSegment.heightAnchor constraintEqualToConstant:32.0];
-    self.coordinateModeBottomConstraint = [self.coordinateModeSegment.bottomAnchor constraintEqualToAnchor:tableHeader.bottomAnchor constant:-8.0];
+    self.searchBarHeightConstraint = [self.searchBar.heightAnchor constraintEqualToConstant:44.0];
+    self.searchBarBottomConstraint = [self.mapContainer.topAnchor constraintEqualToAnchor:self.searchBar.bottomAnchor constant:8.0];
+    self.mapHeightConstraint = [self.mapContainer.heightAnchor constraintEqualToConstant:kLSMapHeight];
+    self.coordinateModeHeightConstraint = [self.coordinateModeSegment.heightAnchor constraintEqualToConstant:0.0];
+    self.coordinateModeBottomConstraint = [self.coordinateModeSegment.bottomAnchor constraintEqualToAnchor:self.coordinateModeSegment.topAnchor];
 
     [NSLayoutConstraint activateConstraints:@[
-        [self.headerView.topAnchor constraintEqualToAnchor:tableHeader.topAnchor constant:8.0],
+        [self.headerView.topAnchor constraintEqualToAnchor:tableHeader.topAnchor constant:12.0],
         [self.headerView.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset],
         [self.headerView.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-kLSHorizontalInset],
 
@@ -414,22 +372,11 @@ static const CGFloat kLSMapHeight = 220.0;
         [self.subtitleLabel.topAnchor constraintEqualToAnchor:self.titleLabel.bottomAnchor constant:3.0],
         [self.subtitleLabel.leadingAnchor constraintEqualToAnchor:self.headerView.leadingAnchor],
         [self.subtitleLabel.trailingAnchor constraintEqualToAnchor:self.headerView.trailingAnchor],
+        [self.subtitleLabel.bottomAnchor constraintEqualToAnchor:self.headerView.bottomAnchor constant:-2.0],
 
-        [self.statusPill.topAnchor constraintEqualToAnchor:self.subtitleLabel.bottomAnchor constant:10.0],
-        [self.statusPill.leadingAnchor constraintEqualToAnchor:self.headerView.leadingAnchor],
-        [self.statusPill.bottomAnchor constraintEqualToAnchor:self.headerView.bottomAnchor],
-
-        [self.statusDot.widthAnchor constraintEqualToConstant:8.0],
-        [self.statusDot.heightAnchor constraintEqualToConstant:8.0],
-
-        [self.statusStackView.topAnchor constraintEqualToAnchor:self.statusPill.topAnchor],
-        [self.statusStackView.leadingAnchor constraintEqualToAnchor:self.statusPill.leadingAnchor],
-        [self.statusStackView.trailingAnchor constraintEqualToAnchor:self.statusPill.trailingAnchor],
-        [self.statusStackView.bottomAnchor constraintEqualToAnchor:self.statusPill.bottomAnchor],
-
-        [self.searchBar.topAnchor constraintEqualToAnchor:self.headerView.bottomAnchor constant:10.0],
-        [self.searchBar.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset - 6.0],
-        [self.searchBar.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-(kLSHorizontalInset - 6.0)],
+        [self.searchBar.topAnchor constraintEqualToAnchor:self.headerView.bottomAnchor constant:4.0],
+        [self.searchBar.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset - 8.0],
+        [self.searchBar.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-(kLSHorizontalInset - 8.0)],
         self.searchBarHeightConstraint,
 
         [self.searchSpinner.centerYAnchor constraintEqualToAnchor:self.searchBar.centerYAnchor],
@@ -438,7 +385,7 @@ static const CGFloat kLSMapHeight = 220.0;
         self.searchBarBottomConstraint,
         [self.mapContainer.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset],
         [self.mapContainer.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-kLSHorizontalInset],
-        [self.mapContainer.heightAnchor constraintEqualToConstant:kLSMapHeight],
+        self.mapHeightConstraint,
 
         [self.mapView.topAnchor constraintEqualToAnchor:self.mapContainer.topAnchor],
         [self.mapView.leadingAnchor constraintEqualToAnchor:self.mapContainer.leadingAnchor],
@@ -460,16 +407,11 @@ static const CGFloat kLSMapHeight = 220.0;
         [self.suggestionsTableView.trailingAnchor constraintEqualToAnchor:self.suggestionsPanel.trailingAnchor],
         [self.suggestionsTableView.bottomAnchor constraintEqualToAnchor:self.suggestionsPanel.bottomAnchor],
 
-        [self.panelTabSegment.topAnchor constraintEqualToAnchor:self.mapContainer.bottomAnchor constant:12.0],
+        [self.panelTabSegment.topAnchor constraintEqualToAnchor:self.mapContainer.bottomAnchor constant:10.0],
         [self.panelTabSegment.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset],
         [self.panelTabSegment.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-kLSHorizontalInset],
         [self.panelTabSegment.heightAnchor constraintEqualToConstant:34.0],
-
-        [self.coordinateModeSegment.topAnchor constraintEqualToAnchor:self.panelTabSegment.bottomAnchor constant:8.0],
-        [self.coordinateModeSegment.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset],
-        [self.coordinateModeSegment.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-kLSHorizontalInset],
-        self.coordinateModeHeightConstraint,
-        self.coordinateModeBottomConstraint
+        [self.panelTabSegment.bottomAnchor constraintEqualToAnchor:tableHeader.bottomAnchor constant:-8.0]
     ]];
 
     self.suggestionsHeightConstraint = [self.suggestionsPanel.heightAnchor constraintEqualToConstant:0.0];
@@ -634,6 +576,8 @@ static const CGFloat kLSMapHeight = 220.0;
     self.heroStatusSubtitleLabel.text = @"Using device native GPS · Toggle to activate";
     self.heroStatusSubtitleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightRegular];
     self.heroStatusSubtitleLabel.textColor = UIColor.secondaryLabelColor;
+    self.heroStatusSubtitleLabel.numberOfLines = 0;
+    self.heroStatusSubtitleLabel.lineBreakMode = NSLineBreakByWordWrapping;
     [self.heroStatusCell.contentView addSubview:self.heroStatusSubtitleLabel];
 
     self.heroStatusSwitch = [[UISwitch alloc] init];
@@ -820,7 +764,17 @@ static const CGFloat kLSMapHeight = 220.0;
                                                                 subtitle:@"Display native GPS blue dot on map"
                                                                  control:self.showRealLocationSwitch];
 
-    // 4: Action Button Cells (Apply, Stop, Cancel)
+    self.darkModeSwitch = [[UISwitch alloc] init];
+    self.darkModeSwitch.on = [[PersistenceManager shared] isEffectiveDarkMode];
+    [self.darkModeSwitch addTarget:self action:@selector(handleDarkModeToggled:) forControlEvents:UIControlEventValueChanged];
+
+    self.darkModeCell = [self ls_createToggleCellWithBadgeSymbol:@"moon.fill"
+                                                      badgeColor:UIColor.systemIndigoColor
+                                                           title:@"Dark Mode"
+                                                        subtitle:@"Always use dark interface theme"
+                                                         control:self.darkModeSwitch];
+
+    // 5: Action Button Cells (Apply/Update Location)
     self.applyButtonCell = [self ls_createButtonCellWithView:self.applyButton];
     self.stopButtonCell = [self ls_createButtonCellWithView:self.stopButton];
     self.cancelButtonCell = [self ls_createButtonCellWithView:self.cancelButton];
@@ -890,6 +844,8 @@ static const CGFloat kLSMapHeight = 220.0;
     sub.text = subtitle;
     sub.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightRegular];
     sub.textColor = UIColor.secondaryLabelColor;
+    sub.numberOfLines = 0;
+    sub.lineBreakMode = NSLineBreakByWordWrapping;
     [cell.contentView addSubview:sub];
 
     [control removeFromSuperview];
@@ -1201,10 +1157,12 @@ static const CGFloat kLSMapHeight = 220.0;
         self.heroStatusDot.backgroundColor = UIColor.systemGreenColor;
         self.heroStatusTitleLabel.text = simulator.isSimulating ? @"Simulation Active" : @"Spoofing Active";
         self.heroStatusSubtitleLabel.text = @"Apps receive your chosen GPS coordinates";
+        [self.applyButton setTitle:@"  Update Location" forState:UIControlStateNormal];
     } else {
         self.heroStatusDot.backgroundColor = UIColor.systemOrangeColor;
         self.heroStatusTitleLabel.text = @"Spoofing Inactive";
         self.heroStatusSubtitleLabel.text = @"Using device native GPS · Toggle to activate";
+        [self.applyButton setTitle:@"  Apply Location" forState:UIControlStateNormal];
     }
 }
 
@@ -1245,6 +1203,11 @@ static const CGFloat kLSMapHeight = 220.0;
 - (void)handleShowRealLocationToggle {
     [PersistenceManager shared].showRealLocation = self.showRealLocationSwitch.isOn;
     [self refreshStatusPill];
+}
+
+- (void)handleDarkModeToggled:(UISwitch *)sender {
+    [PersistenceManager shared].appearancePreference = sender.isOn ? LSAppearancePreferenceDark : LSAppearancePreferenceLight;
+    self.overrideUserInterfaceStyle = sender.isOn ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
 }
 
 #pragma mark - Search Suggestions & Autocomplete
@@ -1722,11 +1685,11 @@ static const CGFloat kLSMapHeight = 220.0;
         return 1;
     }
 
-    if (self.panelTab == LSMapPickerPanelTabBookmarks) {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
         return [self ls_bookmarksNumberOfSections];
     }
 
-    if (self.coordinateMode == LSMapPickerCoordinateModeRoute) {
+    if (self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute) {
         return [self ls_routeNumberOfSections];
     }
 
@@ -1739,11 +1702,11 @@ static const CGFloat kLSMapHeight = 220.0;
         return self.searchCompletions.count;
     }
 
-    if (self.panelTab == LSMapPickerPanelTabBookmarks) {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
         return [self ls_bookmarksNumberOfRowsInSection:section];
     }
 
-    if (self.coordinateMode == LSMapPickerCoordinateModeRoute) {
+    if (self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute) {
         return [self ls_routeNumberOfRowsInSection:section];
     }
 
@@ -1753,8 +1716,8 @@ static const CGFloat kLSMapHeight = 220.0;
         case 1: return 1; // Preview & Bookmark
         case 2: return 3; // Latitude, Longitude, Altitude
         case 3: return 1; // Heading slider
-        case 4: return self.fluctuationSwitch.isOn ? 4 : 3; // Fluctuation, (Radius Slider), Keep Last, Show Real
-        case 5: return [[PersistenceManager shared] isSpoofingEnabled] ? 3 : 2; // Apply, (Stop), Cancel
+        case 4: return self.fluctuationSwitch.isOn ? 5 : 4; // Fluctuation, (Radius Slider), Keep Last, Show Real, Dark Mode
+        case 5: return 1; // Apply / Update Location
         default: return 0;
     }
 }
@@ -1764,11 +1727,11 @@ static const CGFloat kLSMapHeight = 220.0;
         return nil;
     }
 
-    if (self.panelTab == LSMapPickerPanelTabBookmarks) {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
         return [self ls_bookmarksTitleForHeaderInSection:section];
     }
 
-    if (self.coordinateMode == LSMapPickerCoordinateModeRoute) {
+    if (self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute) {
         return [self ls_routeTitleForHeaderInSection:section];
     }
 
@@ -1787,7 +1750,7 @@ static const CGFloat kLSMapHeight = 220.0;
         return nil;
     }
 
-    if (self.panelTab == LSMapPickerPanelTabBookmarks) {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
         return [self ls_bookmarksHeaderForSection:section];
     }
 
@@ -1815,12 +1778,12 @@ static const CGFloat kLSMapHeight = 220.0;
     }
 
     // Bookmarks tab
-    if (self.panelTab == LSMapPickerPanelTabBookmarks) {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
         return [self ls_bookmarksCellForRowAtIndexPath:indexPath];
     }
 
     // Route mode
-    if (self.coordinateMode == LSMapPickerCoordinateModeRoute) {
+    if (self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute) {
         return [self ls_routeCellForRowAtIndexPath:indexPath];
     }
 
@@ -1845,18 +1808,17 @@ static const CGFloat kLSMapHeight = 220.0;
             if (self.fluctuationSwitch.isOn) {
                 if (indexPath.row == 1) return self.fluctuationRadiusCell;
                 if (indexPath.row == 2) return self.keepLastSpoofCell;
-                return self.showRealLocationCell;
+                if (indexPath.row == 3) return self.showRealLocationCell;
+                return self.darkModeCell;
             } else {
                 if (indexPath.row == 1) return self.keepLastSpoofCell;
-                return self.showRealLocationCell;
+                if (indexPath.row == 2) return self.showRealLocationCell;
+                return self.darkModeCell;
             }
         }
 
         case 5: {
-            BOOL isSpoofingActive = [[PersistenceManager shared] isSpoofingEnabled];
-            if (indexPath.row == 0) return self.applyButtonCell;
-            if (indexPath.row == 1 && isSpoofingActive) return self.stopButtonCell;
-            return self.cancelButtonCell;
+            return self.applyButtonCell;
         }
 
         default:
@@ -1875,39 +1837,39 @@ static const CGFloat kLSMapHeight = 220.0;
         return;
     }
 
-    if (self.panelTab == LSMapPickerPanelTabBookmarks) {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
         [self ls_bookmarksDidSelectRowAtIndexPath:indexPath];
         return;
     }
 
-    if (self.coordinateMode == LSMapPickerCoordinateModeRoute) {
+    if (self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute) {
         [self ls_routeDidSelectRowAtIndexPath:indexPath];
         return;
     }
 }
 
 - (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (self.panelTab == LSMapPickerPanelTabBookmarks) {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
         return [self ls_bookmarksCanEditRowAtIndexPath:indexPath];
     }
     return NO;
 }
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (self.panelTab == LSMapPickerPanelTabBookmarks && editingStyle == UITableViewCellEditingStyleDelete) {
+    if (self.panelTab == LSMapPickerPanelTabSaved && editingStyle == UITableViewCellEditingStyleDelete) {
         [self ls_bookmarksCommitDeleteAtIndexPath:indexPath];
     }
 }
 
 - (BOOL)tableView:(UITableView *)tableView canMoveRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (self.panelTab == LSMapPickerPanelTabBookmarks) {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
         return [self ls_bookmarksCanMoveRowAtIndexPath:indexPath];
     }
     return NO;
 }
 
 - (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)sourceIndexPath toIndexPath:(NSIndexPath *)destinationIndexPath {
-    if (self.panelTab == LSMapPickerPanelTabBookmarks) {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
         [self ls_bookmarksMoveFromIndexPath:sourceIndexPath toIndexPath:destinationIndexPath];
     }
 }

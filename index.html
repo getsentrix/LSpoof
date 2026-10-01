@@ -885,7 +885,7 @@
     <section class="hero container">
       <div class="tag-badge">
         <span class="tag-dot"></span>
-        <span>Version 1.1.3 · In-App Auto Update Checker & Dynamic UI</span>
+        <span>Version 1.1.4 · Dark Mode, 3-Tab Layout & Full Saved View</span>
       </div>
       <h1>Change Your iPhone GPS Location.</h1>
       <p class="hero-p">
@@ -950,11 +950,11 @@
                 <div class="map-hint">Tap map or drag pin</div>
               </div>
 
-              <!-- Mode Segment: Static | Route | Bookmarks -->
+              <!-- Mode Segment: Location | Route | Saved -->
               <div class="ios-segment">
-                <button class="ios-segment-btn active" onclick="switchPhoneTab('static')">Static</button>
+                <button class="ios-segment-btn active" onclick="switchPhoneTab('static')">Location</button>
                 <button class="ios-segment-btn" onclick="switchPhoneTab('route')">Route</button>
-                <button class="ios-segment-btn" onclick="switchPhoneTab('bookmarks')">Bookmarks</button>
+                <button class="ios-segment-btn" onclick="switchPhoneTab('bookmarks')">Saved</button>
               </div>
 
               <!-- Static Tab -->
@@ -1019,7 +1019,21 @@
                       <div class="ios-switch-knob"></div>
                     </div>
                   </div>
+
+                  <div class="inset-row" onclick="toggleDemoSwitch('demoDarkSwitch')">
+                    <div class="sf-badge" style="background: #5856d6;">
+                      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </div>
+                    <span class="row-title" style="width: 140px;">Dark Mode</span>
+                    <div class="ios-switch on" id="demoDarkSwitch">
+                      <div class="ios-switch-knob"></div>
+                    </div>
+                  </div>
                 </div>
+
+                <button class="btn btn-primary" style="width: 100%; border-radius: 12px; margin-top: 8px; justify-content: center; font-size: 0.88rem; padding: 10px;" onclick="showToast('Location updated!')">
+                  Update Location
+                </button>
               </div>
 
               <!-- Route Tab -->
@@ -1088,9 +1102,11 @@
                     </div>
                   </div>
                 </div>
+              </div>
+
               <!-- Version & Update Check Footer -->
               <div style="text-align: center; margin: 14px 0 4px;">
-                <button onclick="showToast('LSpoof is up to date (v1.1.3)')" style="background: none; border: none; font-size: 0.72rem; color: #8e8e93; cursor: pointer; text-decoration: underline;">LSpoof v1.1.3 · Check for Updates</button>
+                <button onclick="showToast('LSpoof is up to date (v1.1.4)')" style="background: none; border: none; font-size: 0.72rem; color: #8e8e93; cursor: pointer; text-decoration: underline;">LSpoof v1.1.4 · Check for Updates</button>
               </div>
 
             </div>
@@ -1270,6 +1286,8 @@
       const staticDiv = document.getElementById('phoneTabStatic');
       const routeDiv = document.getElementById('phoneTabRoute');
       const bmarksDiv = document.getElementById('phoneTabBookmarks');
+      const mapEl = document.getElementById('demoMap');
+      const searchEl = document.querySelector('.ios-search');
       const btns = document.querySelectorAll('.ios-segment-btn');
 
       btns.forEach(b => b.classList.remove('active'));
@@ -1279,16 +1297,22 @@
         staticDiv.style.display = 'block';
         routeDiv.style.display = 'none';
         bmarksDiv.style.display = 'none';
+        mapEl.style.display = 'block';
+        searchEl.style.display = 'flex';
       } else if (tab === 'route') {
         btns[1].classList.add('active');
         staticDiv.style.display = 'none';
         routeDiv.style.display = 'block';
         bmarksDiv.style.display = 'none';
+        mapEl.style.display = 'block';
+        searchEl.style.display = 'none';
       } else {
         btns[2].classList.add('active');
         staticDiv.style.display = 'none';
         routeDiv.style.display = 'none';
         bmarksDiv.style.display = 'block';
+        mapEl.style.display = 'none';
+        searchEl.style.display = 'none';
       }
     }
   </script>

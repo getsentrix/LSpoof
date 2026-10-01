@@ -50,7 +50,7 @@ self_accesses = set(re.findall(r'\bself\.([a-zA-Z0-9_]+)\b', main_m + '\n' + rou
 uivc_props = {
     'view', 'tableView', 'isEditing', 'navigationController', 'navigationItem', 'tabBarController',
     'presentedViewController', 'presentingViewController', 'modalPresentationStyle',
-    'sheetPresentationController', 'preferredContentSize', 'title'
+    'sheetPresentationController', 'preferredContentSize', 'title', 'overrideUserInterfaceStyle'
 }
 unknown_props = []
 for prop in self_accesses:
