@@ -66,17 +66,17 @@ jobs:
             if [[ "${{ github.ref }}" == refs/tags/* ]]; then
               TAG="${GITHUB_REF#refs/tags/}"
             else
-              TAG="v1.1.7"
+              TAG="v1.1.8"
             fi
           fi
           echo "Using tag: $TAG"
           cat << 'EOF' > notes.md
-          ## LSpoof v1.1.7 - Integrated Top Bar Menu Button & Touch Fix
+          ## LSpoof v1.1.8 - Production-Grade Top Bar Button & Touch Fix
 
           ### What's New
-          - **Integrated Top Bar Menu Button**: Replaced floating window overlay with a native button built directly into the app's top bar right next to the Circle Name pill. Looks and feels like a built-in feature of the app.
-          - **Full Touch Responsiveness**: Completely eliminated the secondary UIWindow overlay that was intercepting touches and causing touches to pass through to the background app. All menu buttons, table cells, text fields, and map pins respond instantly.
-          - **Enhanced Sheet Backdrop**: Applied non-clear liquid glass material backdrop to ensure sheets capture 100% of gestures while retaining the native Apple blur aesthetic.
+          - **Permanent Top Bar Button**: Attached directly to keyWindow with `LSTopBarMenuButton` expanded touch target. Never gets clipped by container view bounds or removed by subview recycling.
+          - **Zero Random Disappearance**: Replaced destructive remove/re-add timer with idempotent frame reconciliation that keeps the button permanently in front.
+          - **100% Touch Capture**: Reliable button clicks and zero touch pass-through when the menu is open.
 
           ### Assets
           - `LocationSpoofer.dylib`: Sideloadable arm64 Mach-O dynamic library for iOS 14.0+

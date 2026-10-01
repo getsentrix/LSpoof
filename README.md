@@ -22,11 +22,11 @@
 
 ---
 
-## ⚡ What's New in v1.1.7
+## ⚡ What's New in v1.1.8
 
-- **Integrated Top Bar Menu Button**: Replaced floating window overlay with a native button built directly into the app's top bar right next to the Circle Name pill.
-- **Full Touch Responsiveness**: Eliminated secondary window overlay touch interception. All mod menu buttons, cells, and map gestures work with 100% responsiveness.
-- **Enhanced Sheet Backdrop**: Rich liquid glass material backdrop preventing touch pass-through to background app views.
+- **Permanent Top Bar Button**: Attached directly to keyWindow with `LSTopBarMenuButton` expanded touch target. Never gets clipped by container view bounds or removed by subview recycling.
+- **Zero Random Disappearance**: Replaced destructive remove/re-add timer with idempotent frame reconciliation that keeps the button permanently in front.
+- **100% Touch Capture**: Reliable button clicks and zero touch pass-through when the menu is open.
 
 ---
 
