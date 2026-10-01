@@ -11,7 +11,7 @@ on:
       tag_name:
         description: 'Release Tag'
         required: false
-        default: 'v1.1.0'
+        default: 'v1.1.1'
 
 permissions:
   contents: write
@@ -65,18 +65,20 @@ jobs:
             if [[ "${{ github.ref }}" == refs/tags/* ]]; then
               TAG="${GITHUB_REF#refs/tags/}"
             else
-              TAG="v1.1.0"
+              TAG="v1.1.1"
             fi
           fi
           echo "Using tag: $TAG"
           cat << 'EOF' > notes.md
-          ## v1.1.0 - Modern Inset Grouped UI & Apple SF Symbols
+          ## v1.1.1 - Inset Grouped UI Polish, Glitch Fixes & Apple SF Symbols
 
           ### What's New
-          - **Modern Inset Grouped UI Layout**: Replaced older sharp box margins with native iOS rounded inset grouped cards (`UITableViewStyleInsetGrouped`).
-          - **Apple SF Symbols**: Added native Apple system icon badges next to coordinate inputs (Latitude, Longitude, Altitude), heading bearing, and toggle switches (Location Fluctuation, Keep Last Location, Show Real Location).
-          - **Glitch-Free Interface**: Redesigned UI hierarchy to eliminate nested scroll view conflicts, floating search suggestions that no longer push layout, and buttery-smooth toggle animations.
-          - **Dark Mode Polish**: Native iOS dynamic semantic colors, monospaced digit formatting, clear placeholders, and consistent 16pt insets matching iOS HIG standards.
+          - **Retained Static Cell Architecture**: Modern `UITableViewStyleInsetGrouped` layout using retained static cells to eliminate layout thrashing, view re-parenting, and keyboard dismiss glitches during table reloads.
+          - **Fixed Coordinate Typing Bug**: Smooth, continuous coordinate entry without cursor jumping, string reformatting disruptions, or premature haptic error shakes. Added `+/-` sign toggle on keyboard toolbar.
+          - **Resilient Unit & Number Parsing**: Robust scanning of coordinates, altitude, drift radius, and custom speed values with or without unit suffixes (`m`, `km/h`).
+          - **Collapsible Header & Fluid Animations**: Clean animated collapsing of search bar and coordinate mode segment on Bookmarks tab; auto-collapsing status pill layout.
+          - **Bookmark Data Integrity & Non-Disruptive Editing**: Direct `indexPath` resolution on Apply action avoiding stale index bugs after deletion; smooth table editing animations without flickering.
+          - **Touch & Gesture Polish**: Standard 500ms long-press threshold with touch filtering protecting annotation pin drag gestures.
 
           ### Assets
           - `LocationSpoofer.dylib`: Sideloadable arm64 Mach-O dynamic library for iOS 16.0+
@@ -87,6 +89,6 @@ jobs:
           } || {
             gh release create "$TAG" LocationSpoofer.dylib \
               --repo getsentrix/LSpoof \
-              --title "v1.1.0 - Modern Inset Grouped UI & Apple SF Symbols" \
+              --title "v1.1.1 - Inset Grouped UI Polish, Glitch Fixes & Apple SF Symbols" \
               --notes-file notes.md
           }

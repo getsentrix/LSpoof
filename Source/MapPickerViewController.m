@@ -37,6 +37,7 @@ static const CGFloat kLSMapHeight = 220.0;
     self.coordinateMode = LSMapPickerCoordinateModeStatic;
 
     [self buildInterface];
+    [self buildStaticCells];
     [self buildRouteControls];
     [self buildBookmarksPanel];
     [self configureKeyboardToolbar];
@@ -45,18 +46,33 @@ static const CGFloat kLSMapHeight = 220.0;
     [self refreshStatusPill];
     [self syncFieldsFromCoordinate];
 
-    self.altitudeField.text = [NSString stringWithFormat:@"%.0f", store.altitude];
+    self.altitudeField.text = [NSString stringWithFormat:@"%.0f m", store.altitude];
     self.headingSlider.value = (float)store.heading;
     [self updateHeadingLabel];
     [self updatePanelTabVisibility];
 
     self.fluctuationSwitch.on = store.fluctuationEnabled;
-    self.fluctuationRadiusField.text = [NSString stringWithFormat:@"%.0f", store.fluctuationRadius];
+    self.fluctuationRadiusField.text = [NSString stringWithFormat:@"%.0f m", store.fluctuationRadius];
     self.keepLastSpoofSwitch.on = store.keepLastSpoof;
     self.showRealLocationSwitch.on = store.showRealLocation;
 
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(ls_keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(ls_keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+}
+
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    [self ls_updateTableHeaderLayout];
+}
+
+- (void)dealloc {
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+    _searchCompleter.delegate = nil;
+    _mapView.delegate = nil;
+    _tableView.delegate = nil;
+    _tableView.dataSource = nil;
+    _suggestionsTableView.delegate = nil;
+    _suggestionsTableView.dataSource = nil;
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -80,6 +96,57 @@ static const CGFloat kLSMapHeight = 220.0;
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated];
     [LSOverlayManager restoreMapPickerSessionState];
+}
+
+#pragma mark - SF Symbol Fallbacks
+
++ (UIImage *)systemImageNamedWithFallback:(NSString *)name configuration:(nullable UIImageConfiguration *)config {
+    UIImage *img = config ? [UIImage systemImageNamed:name withConfiguration:config] : [UIImage systemImageNamed:name];
+    if (img) return img;
+
+    static NSDictionary<NSString *, NSString *> *fallbacks = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        fallbacks = @{
+            @"globe.americas.fill": @"globe",
+            @"mountain.2.fill": @"triangle.fill",
+            @"circle.dashed": @"circle",
+            @"location.fill.viewfinder": @"location.fill",
+            @"flag.checkered": @"flag.fill",
+            @"arrow.triangle.turn.up.right.diamond.fill": @"arrow.turn.up.right"
+        };
+    });
+
+    NSString *fallbackName = fallbacks[name];
+    if (fallbackName) {
+        return config ? [UIImage systemImageNamed:fallbackName withConfiguration:config] : [UIImage systemImageNamed:fallbackName];
+    }
+    return nil;
+}
+
++ (UIView *)iconBadgeWithSymbolName:(NSString *)symbolName backgroundColor:(UIColor *)bgColor {
+    UIView *badge = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 30.0, 30.0)];
+    badge.translatesAutoresizingMaskIntoConstraints = NO;
+    badge.backgroundColor = bgColor;
+    badge.layer.cornerRadius = 7.0;
+    badge.layer.cornerCurve = kCACornerCurveContinuous;
+    badge.clipsToBounds = YES;
+
+    UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:14.0 weight:UIFontWeightSemibold];
+    UIImage *image = [self systemImageNamedWithFallback:symbolName configuration:config];
+    UIImageView *iv = [[UIImageView alloc] initWithImage:image];
+    iv.translatesAutoresizingMaskIntoConstraints = NO;
+    iv.tintColor = UIColor.whiteColor;
+    iv.contentMode = UIViewContentModeCenter;
+    [badge addSubview:iv];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [badge.widthAnchor constraintEqualToConstant:30.0],
+        [badge.heightAnchor constraintEqualToConstant:30.0],
+        [iv.centerXAnchor constraintEqualToAnchor:badge.centerXAnchor],
+        [iv.centerYAnchor constraintEqualToAnchor:badge.centerYAnchor]
+    ]];
+    return badge;
 }
 
 #pragma mark - Interface Setup
@@ -135,14 +202,14 @@ static const CGFloat kLSMapHeight = 220.0;
     self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.closeButton.translatesAutoresizingMaskIntoConstraints = NO;
     UIImageConfiguration *closeConfig = [UIImageSymbolConfiguration configurationWithPointSize:26.0 weight:UIFontWeightRegular];
-    UIImage *closeImage = [UIImage systemImageNamed:@"xmark.circle.fill" withConfiguration:closeConfig];
+    UIImage *closeImage = [MapPickerViewController systemImageNamedWithFallback:@"xmark.circle.fill" configuration:closeConfig];
     [self.closeButton setImage:closeImage forState:UIControlStateNormal];
     self.closeButton.tintColor = UIColor.tertiaryLabelColor;
     self.closeButton.accessibilityLabel = @"Close";
     [self.closeButton addTarget:self action:@selector(handleCancel) forControlEvents:UIControlEventTouchUpInside];
     [self.headerView addSubview:self.closeButton];
 
-    // Status pill
+    // Status pill with collapsing stack view
     self.statusPill = [[UIView alloc] init];
     self.statusPill.translatesAutoresizingMaskIntoConstraints = NO;
     self.statusPill.backgroundColor = [UIColor.tertiarySystemFillColor colorWithAlphaComponent:0.9];
@@ -155,13 +222,11 @@ static const CGFloat kLSMapHeight = 220.0;
     self.statusDot.translatesAutoresizingMaskIntoConstraints = NO;
     self.statusDot.layer.cornerRadius = 4.0;
     self.statusDot.backgroundColor = UIColor.systemOrangeColor;
-    [self.statusPill addSubview:self.statusDot];
 
     self.statusLabel = [[UILabel alloc] init];
     self.statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.statusLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightSemibold];
     self.statusLabel.textColor = UIColor.secondaryLabelColor;
-    [self.statusPill addSubview:self.statusLabel];
 
     self.pillStopLabel = [[UILabel alloc] init];
     self.pillStopLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -169,7 +234,15 @@ static const CGFloat kLSMapHeight = 220.0;
     self.pillStopLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightBold];
     self.pillStopLabel.textColor = UIColor.systemRedColor;
     self.pillStopLabel.hidden = YES;
-    [self.statusPill addSubview:self.pillStopLabel];
+
+    self.statusStackView = [[UIStackView alloc] initWithArrangedSubviews:@[self.statusDot, self.statusLabel, self.pillStopLabel]];
+    self.statusStackView.translatesAutoresizingMaskIntoConstraints = NO;
+    self.statusStackView.axis = UILayoutConstraintAxisHorizontal;
+    self.statusStackView.alignment = UIStackViewAlignmentCenter;
+    self.statusStackView.spacing = 6.0;
+    self.statusStackView.isLayoutMarginsRelativeArrangement = YES;
+    self.statusStackView.layoutMargins = UIEdgeInsetsMake(6.0, 10.0, 6.0, 12.0);
+    [self.statusPill addSubview:self.statusStackView];
 
     UITapGestureRecognizer *pillTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleStatusPillTapped)];
     [self.statusPill addGestureRecognizer:pillTap];
@@ -183,6 +256,7 @@ static const CGFloat kLSMapHeight = 220.0;
     self.searchBar.backgroundImage = [[UIImage alloc] init];
     self.searchBar.backgroundColor = UIColor.clearColor;
     self.searchBar.tintColor = UIColor.systemBlueColor;
+    self.searchBar.layoutMargins = UIEdgeInsetsZero;
     UITextField *tf = self.searchBar.searchTextField;
     tf.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightMedium];
     tf.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
@@ -215,12 +289,13 @@ static const CGFloat kLSMapHeight = 220.0;
     self.mapView.layoutMargins = UIEdgeInsetsMake(12.0, 12.0, 12.0, 12.0);
     [self.mapContainer addSubview:self.mapView];
 
-    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleMapTap:)];
-    UILongPressGestureRecognizer *longPressGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleMapLongPress:)];
-    longPressGesture.minimumPressDuration = 0.25;
-    [tapGesture requireGestureRecognizerToFail:longPressGesture];
-    [self.mapView addGestureRecognizer:tapGesture];
-    [self.mapView addGestureRecognizer:longPressGesture];
+    self.mapTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleMapTap:)];
+    self.mapLongPressGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleMapLongPress:)];
+    self.mapLongPressGesture.minimumPressDuration = 0.5;
+    self.mapLongPressGesture.delegate = self;
+    [self.mapTapGesture requireGestureRecognizerToFail:self.mapLongPressGesture];
+    [self.mapView addGestureRecognizer:self.mapTapGesture];
+    [self.mapView addGestureRecognizer:self.mapLongPressGesture];
 
     // Map hint badge
     self.mapHintLabel = [[UILabel alloc] init];
@@ -241,7 +316,7 @@ static const CGFloat kLSMapHeight = 220.0;
     self.mapSpinner.color = UIColor.systemGrayColor;
     [self.mapContainer addSubview:self.mapSpinner];
 
-    // Floating Search Suggestions Overlay (above mapContainer)
+    // Floating Search Suggestions Overlay
     self.suggestionsPanel = [[UIView alloc] init];
     self.suggestionsPanel.translatesAutoresizingMaskIntoConstraints = NO;
     self.suggestionsPanel.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
@@ -261,8 +336,7 @@ static const CGFloat kLSMapHeight = 220.0;
     self.suggestionsTableView.separatorInset = UIEdgeInsetsMake(0.0, 16.0, 0.0, 16.0);
     self.suggestionsTableView.rowHeight = kLSSuggestionRowHeight;
     self.suggestionsTableView.backgroundColor = UIColor.clearColor;
-    self.suggestionsTableView.sectionHeaderHeight = 0.0;
-    self.suggestionsTableView.sectionFooterHeight = 0.0;
+    self.suggestionsTableView.keyboardDismissMode = UIScrollViewKeyboardDismissModeNone;
     [self.suggestionsTableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"LSSearchSuggestionCell"];
     [self.suggestionsPanel addSubview:self.suggestionsTableView];
 
@@ -281,6 +355,11 @@ static const CGFloat kLSMapHeight = 220.0;
     [tableHeader addSubview:self.coordinateModeSegment];
 
     // Header layout constraints
+    self.searchBarHeightConstraint = [self.searchBar.heightAnchor constraintEqualToConstant:48.0];
+    self.searchBarBottomConstraint = [self.mapContainer.topAnchor constraintEqualToAnchor:self.searchBar.bottomAnchor constant:6.0];
+    self.coordinateModeHeightConstraint = [self.coordinateModeSegment.heightAnchor constraintEqualToConstant:32.0];
+    self.coordinateModeBottomConstraint = [self.coordinateModeSegment.bottomAnchor constraintEqualToAnchor:tableHeader.bottomAnchor constant:-8.0];
+
     [NSLayoutConstraint activateConstraints:@[
         [self.headerView.topAnchor constraintEqualToAnchor:tableHeader.topAnchor constant:8.0],
         [self.headerView.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset],
@@ -303,28 +382,23 @@ static const CGFloat kLSMapHeight = 220.0;
         [self.statusPill.leadingAnchor constraintEqualToAnchor:self.headerView.leadingAnchor],
         [self.statusPill.bottomAnchor constraintEqualToAnchor:self.headerView.bottomAnchor],
 
-        [self.statusDot.leadingAnchor constraintEqualToAnchor:self.statusPill.leadingAnchor constant:10.0],
-        [self.statusDot.centerYAnchor constraintEqualToAnchor:self.statusPill.centerYAnchor],
         [self.statusDot.widthAnchor constraintEqualToConstant:8.0],
         [self.statusDot.heightAnchor constraintEqualToConstant:8.0],
 
-        [self.statusLabel.leadingAnchor constraintEqualToAnchor:self.statusDot.trailingAnchor constant:8.0],
-        [self.statusLabel.topAnchor constraintEqualToAnchor:self.statusPill.topAnchor constant:6.0],
-        [self.statusLabel.bottomAnchor constraintEqualToAnchor:self.statusPill.bottomAnchor constant:-6.0],
-
-        [self.pillStopLabel.leadingAnchor constraintEqualToAnchor:self.statusLabel.trailingAnchor constant:6.0],
-        [self.pillStopLabel.centerYAnchor constraintEqualToAnchor:self.statusPill.centerYAnchor],
-        [self.pillStopLabel.trailingAnchor constraintEqualToAnchor:self.statusPill.trailingAnchor constant:-12.0],
+        [self.statusStackView.topAnchor constraintEqualToAnchor:self.statusPill.topAnchor],
+        [self.statusStackView.leadingAnchor constraintEqualToAnchor:self.statusPill.leadingAnchor],
+        [self.statusStackView.trailingAnchor constraintEqualToAnchor:self.statusPill.trailingAnchor],
+        [self.statusStackView.bottomAnchor constraintEqualToAnchor:self.statusPill.bottomAnchor],
 
         [self.searchBar.topAnchor constraintEqualToAnchor:self.headerView.bottomAnchor constant:10.0],
-        [self.searchBar.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:10.0],
-        [self.searchBar.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-10.0],
-        [self.searchBar.heightAnchor constraintEqualToConstant:48.0],
+        [self.searchBar.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset - 6.0],
+        [self.searchBar.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-(kLSHorizontalInset - 6.0)],
+        self.searchBarHeightConstraint,
 
         [self.searchSpinner.centerYAnchor constraintEqualToAnchor:self.searchBar.centerYAnchor],
         [self.searchSpinner.trailingAnchor constraintEqualToAnchor:self.searchBar.trailingAnchor constant:-16.0],
 
-        [self.mapContainer.topAnchor constraintEqualToAnchor:self.searchBar.bottomAnchor constant:6.0],
+        self.searchBarBottomConstraint,
         [self.mapContainer.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset],
         [self.mapContainer.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-kLSHorizontalInset],
         [self.mapContainer.heightAnchor constraintEqualToConstant:kLSMapHeight],
@@ -357,31 +431,54 @@ static const CGFloat kLSMapHeight = 220.0;
         [self.coordinateModeSegment.topAnchor constraintEqualToAnchor:self.panelTabSegment.bottomAnchor constant:8.0],
         [self.coordinateModeSegment.leadingAnchor constraintEqualToAnchor:tableHeader.leadingAnchor constant:kLSHorizontalInset],
         [self.coordinateModeSegment.trailingAnchor constraintEqualToAnchor:tableHeader.trailingAnchor constant:-kLSHorizontalInset],
-        [self.coordinateModeSegment.heightAnchor constraintEqualToConstant:32.0],
-        [self.coordinateModeSegment.bottomAnchor constraintEqualToAnchor:tableHeader.bottomAnchor constant:-8.0]
+        self.coordinateModeHeightConstraint,
+        self.coordinateModeBottomConstraint
     ]];
 
     self.suggestionsHeightConstraint = [self.suggestionsPanel.heightAnchor constraintEqualToConstant:0.0];
     self.suggestionsHeightConstraint.active = YES;
 
-    // Size header for table view
-    [tableHeader layoutIfNeeded];
-    CGFloat headerHeight = [tableHeader systemLayoutSizeFittingSize:UILayoutFittingCompressedSize].height;
-    tableHeader.frame = CGRectMake(0, 0, self.view.bounds.size.width, headerHeight);
     self.tableView.tableHeaderView = tableHeader;
+    [self ls_updateTableHeaderLayout];
+}
+
+- (void)ls_updateTableHeaderLayout {
+    UIView *header = self.tableView.tableHeaderView;
+    if (!header) return;
+
+    CGFloat width = self.tableView.bounds.size.width;
+    if (width <= 0) width = self.view.bounds.size.width;
+    if (width <= 0) return;
+
+    CGRect frame = header.frame;
+    frame.size.width = width;
+    header.frame = frame;
+
+    [header setNeedsLayout];
+    [header layoutIfNeeded];
+
+    CGFloat targetHeight = [header systemLayoutSizeFittingSize:CGSizeMake(width, 0)
+                                 withHorizontalFittingPriority:UILayoutPriorityRequired
+                                       verticalFittingPriority:UILayoutPriorityFittingSizeLevel].height;
+
+    if (fabs(header.frame.size.height - targetHeight) > 0.5) {
+        frame.size.height = targetHeight;
+        header.frame = frame;
+        self.tableView.tableHeaderView = header;
+    }
 }
 
 - (void)buildControls {
     // Latitude text field
-    self.latitudeField = [self ls_createInputTextFieldWithPlaceholder:@"37.774900"];
+    self.latitudeField = [self ls_createInputTextFieldWithPlaceholder:@"e.g. 37.774900"];
     [self.latitudeField addTarget:self action:@selector(textFieldDidChange:) forControlEvents:UIControlEventEditingChanged];
 
     // Longitude text field
-    self.longitudeField = [self ls_createInputTextFieldWithPlaceholder:@"-122.419400"];
+    self.longitudeField = [self ls_createInputTextFieldWithPlaceholder:@"e.g. -122.419400"];
     [self.longitudeField addTarget:self action:@selector(textFieldDidChange:) forControlEvents:UIControlEventEditingChanged];
 
     // Altitude text field
-    self.altitudeField = [self ls_createInputTextFieldWithPlaceholder:@"0 m"];
+    self.altitudeField = [self ls_createInputTextFieldWithPlaceholder:@"e.g. 0 m"];
     [self.altitudeField addTarget:self action:@selector(textFieldDidChange:) forControlEvents:UIControlEventEditingChanged];
 
     // Heading slider and labels
@@ -400,7 +497,7 @@ static const CGFloat kLSMapHeight = 220.0;
     self.fluctuationSwitch = [[UISwitch alloc] init];
     [self.fluctuationSwitch addTarget:self action:@selector(handleFluctuationToggle) forControlEvents:UIControlEventValueChanged];
 
-    self.fluctuationRadiusField = [self ls_createInputTextFieldWithPlaceholder:@"50 m"];
+    self.fluctuationRadiusField = [self ls_createInputTextFieldWithPlaceholder:@"e.g. 50 m"];
     self.fluctuationRadiusField.keyboardType = UIKeyboardTypeNumberPad;
     [self.fluctuationRadiusField addTarget:self action:@selector(handleFluctuationRadiusChanged) forControlEvents:UIControlEventEditingDidEnd];
 
@@ -417,7 +514,7 @@ static const CGFloat kLSMapHeight = 220.0;
     [self.applyButton setTitle:@"  Apply Location" forState:UIControlStateNormal];
     [self.applyButton setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
     self.applyButton.titleLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightBold];
-    UIImage *checkIcon = [UIImage systemImageNamed:@"checkmark.circle.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:17.0 weight:UIFontWeightBold]];
+    UIImage *checkIcon = [MapPickerViewController systemImageNamedWithFallback:@"checkmark.circle.fill" configuration:[UIImageSymbolConfiguration configurationWithPointSize:17.0 weight:UIFontWeightBold]];
     [self.applyButton setImage:checkIcon forState:UIControlStateNormal];
     self.applyButton.tintColor = UIColor.whiteColor;
     self.applyButton.backgroundColor = UIColor.systemBlueColor;
@@ -430,7 +527,7 @@ static const CGFloat kLSMapHeight = 220.0;
     [self.stopButton setTitle:@"  Stop Spoofing" forState:UIControlStateNormal];
     [self.stopButton setTitleColor:UIColor.systemRedColor forState:UIControlStateNormal];
     self.stopButton.titleLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightBold];
-    UIImage *stopIcon = [UIImage systemImageNamed:@"stop.circle.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:17.0 weight:UIFontWeightBold]];
+    UIImage *stopIcon = [MapPickerViewController systemImageNamedWithFallback:@"stop.circle.fill" configuration:[UIImageSymbolConfiguration configurationWithPointSize:17.0 weight:UIFontWeightBold]];
     [self.stopButton setImage:stopIcon forState:UIControlStateNormal];
     self.stopButton.tintColor = UIColor.systemRedColor;
     self.stopButton.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.12];
@@ -445,6 +542,9 @@ static const CGFloat kLSMapHeight = 220.0;
     [self.cancelButton setTitle:@"Cancel" forState:UIControlStateNormal];
     [self.cancelButton setTitleColor:UIColor.secondaryLabelColor forState:UIControlStateNormal];
     self.cancelButton.titleLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightMedium];
+    self.cancelButton.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.cancelButton.layer.cornerRadius = 14.0;
+    self.cancelButton.layer.cornerCurve = kCACornerCurveContinuous;
     [self.cancelButton addTarget:self action:@selector(handleCancel) forControlEvents:UIControlEventTouchUpInside];
 }
 
@@ -463,31 +563,246 @@ static const CGFloat kLSMapHeight = 220.0;
     return field;
 }
 
-#pragma mark - Icon Badge Factory
+#pragma mark - Retained Static Cells Setup
 
-+ (UIView *)iconBadgeWithSymbolName:(NSString *)symbolName backgroundColor:(UIColor *)bgColor {
-    UIView *badge = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 30.0, 30.0)];
-    badge.translatesAutoresizingMaskIntoConstraints = NO;
-    badge.backgroundColor = bgColor;
-    badge.layer.cornerRadius = 7.0;
-    badge.layer.cornerCurve = kCACornerCurveContinuous;
-    badge.clipsToBounds = YES;
+- (void)buildStaticCells {
+    // 0: Target Coordinate Preview & Bookmark Cell
+    self.previewCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
+    self.previewCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.previewCell.selectionStyle = UITableViewCellSelectionStyleNone;
 
-    UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:14.0 weight:UIFontWeightSemibold];
-    UIImage *image = [UIImage systemImageNamed:symbolName withConfiguration:config];
-    UIImageView *iv = [[UIImageView alloc] initWithImage:image];
-    iv.translatesAutoresizingMaskIntoConstraints = NO;
-    iv.tintColor = UIColor.whiteColor;
-    iv.contentMode = UIViewContentModeCenter;
-    [badge addSubview:iv];
+    UIView *previewBadge = [MapPickerViewController iconBadgeWithSymbolName:@"mappin.and.ellipse" backgroundColor:UIColor.systemRedColor];
+    [self.previewCell.contentView addSubview:previewBadge];
+
+    UILabel *previewTitle = [[UILabel alloc] init];
+    previewTitle.translatesAutoresizingMaskIntoConstraints = NO;
+    previewTitle.text = @"Target Coordinate";
+    previewTitle.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightSemibold];
+    previewTitle.textColor = UIColor.labelColor;
+    [self.previewCell.contentView addSubview:previewTitle];
+
+    self.previewCoordLabel = [[UILabel alloc] init];
+    self.previewCoordLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.previewCoordLabel.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
+    self.previewCoordLabel.textColor = UIColor.secondaryLabelColor;
+    [self.previewCell.contentView addSubview:self.previewCoordLabel];
+
+    UIButton *bmBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    bmBtn.translatesAutoresizingMaskIntoConstraints = NO;
+    UIImage *bmIcon = [MapPickerViewController systemImageNamedWithFallback:@"bookmark.fill" configuration:[UIImageSymbolConfiguration configurationWithPointSize:18.0 weight:UIFontWeightSemibold]];
+    [bmBtn setImage:bmIcon forState:UIControlStateNormal];
+    bmBtn.tintColor = UIColor.systemYellowColor;
+    bmBtn.accessibilityLabel = @"Save Bookmark";
+    [bmBtn addTarget:self action:@selector(handleBookmarkSaveTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.previewCell.contentView addSubview:bmBtn];
 
     [NSLayoutConstraint activateConstraints:@[
-        [badge.widthAnchor constraintEqualToConstant:30.0],
-        [badge.heightAnchor constraintEqualToConstant:30.0],
-        [iv.centerXAnchor constraintEqualToAnchor:badge.centerXAnchor],
-        [iv.centerYAnchor constraintEqualToAnchor:badge.centerYAnchor]
+        [previewBadge.leadingAnchor constraintEqualToAnchor:self.previewCell.contentView.leadingAnchor constant:16.0],
+        [previewBadge.centerYAnchor constraintEqualToAnchor:self.previewCell.contentView.centerYAnchor],
+
+        [previewTitle.leadingAnchor constraintEqualToAnchor:previewBadge.trailingAnchor constant:12.0],
+        [previewTitle.topAnchor constraintEqualToAnchor:self.previewCell.contentView.topAnchor constant:10.0],
+
+        [self.previewCoordLabel.leadingAnchor constraintEqualToAnchor:previewTitle.leadingAnchor],
+        [self.previewCoordLabel.topAnchor constraintEqualToAnchor:previewTitle.bottomAnchor constant:3.0],
+        [self.previewCoordLabel.bottomAnchor constraintEqualToAnchor:self.previewCell.contentView.bottomAnchor constant:-10.0],
+        [self.previewCoordLabel.trailingAnchor constraintLessThanOrEqualToAnchor:bmBtn.leadingAnchor constant:-8.0],
+
+        [bmBtn.trailingAnchor constraintEqualToAnchor:self.previewCell.contentView.trailingAnchor constant:-16.0],
+        [bmBtn.centerYAnchor constraintEqualToAnchor:self.previewCell.contentView.centerYAnchor],
+        [bmBtn.widthAnchor constraintEqualToConstant:36.0],
+        [bmBtn.heightAnchor constraintEqualToConstant:36.0]
     ]];
-    return badge;
+
+    // 1: Coordinate Inputs (Latitude, Longitude, Altitude)
+    self.latitudeCell = [self ls_createCoordinateCellWithBadgeSymbol:@"location.north.fill"
+                                                          badgeColor:UIColor.systemBlueColor
+                                                               title:@"Latitude"
+                                                           textField:self.latitudeField];
+
+    self.longitudeCell = [self ls_createCoordinateCellWithBadgeSymbol:@"globe.americas.fill"
+                                                           badgeColor:UIColor.systemTealColor
+                                                                title:@"Longitude"
+                                                            textField:self.longitudeField];
+
+    self.altitudeCell = [self ls_createCoordinateCellWithBadgeSymbol:@"mountain.2.fill"
+                                                          badgeColor:UIColor.systemOrangeColor
+                                                               title:@"Altitude"
+                                                           textField:self.altitudeField];
+
+    // 2: Heading Slider Cell
+    self.headingCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    self.headingCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.headingCell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    UIView *headingBadge = [MapPickerViewController iconBadgeWithSymbolName:@"safari.fill" backgroundColor:UIColor.systemIndigoColor];
+    [self.headingCell.contentView addSubview:headingBadge];
+
+    UILabel *headingLbl = [[UILabel alloc] init];
+    headingLbl.translatesAutoresizingMaskIntoConstraints = NO;
+    headingLbl.text = @"Heading";
+    headingLbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
+    headingLbl.textColor = UIColor.labelColor;
+    [self.headingCell.contentView addSubview:headingLbl];
+
+    self.headingValueLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.headingCell.contentView addSubview:self.headingValueLabel];
+
+    self.headingSlider.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.headingCell.contentView addSubview:self.headingSlider];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [headingBadge.leadingAnchor constraintEqualToAnchor:self.headingCell.contentView.leadingAnchor constant:16.0],
+        [headingBadge.topAnchor constraintEqualToAnchor:self.headingCell.contentView.topAnchor constant:12.0],
+
+        [headingLbl.leadingAnchor constraintEqualToAnchor:headingBadge.trailingAnchor constant:12.0],
+        [headingLbl.centerYAnchor constraintEqualToAnchor:headingBadge.centerYAnchor],
+
+        [self.headingValueLabel.trailingAnchor constraintEqualToAnchor:self.headingCell.contentView.trailingAnchor constant:-16.0],
+        [self.headingValueLabel.centerYAnchor constraintEqualToAnchor:headingBadge.centerYAnchor],
+        [self.headingValueLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:headingLbl.trailingAnchor constant:8.0],
+
+        [self.headingSlider.topAnchor constraintEqualToAnchor:headingBadge.bottomAnchor constant:12.0],
+        [self.headingSlider.leadingAnchor constraintEqualToAnchor:self.headingCell.contentView.leadingAnchor constant:16.0],
+        [self.headingSlider.trailingAnchor constraintEqualToAnchor:self.headingCell.contentView.trailingAnchor constant:-16.0],
+        [self.headingSlider.bottomAnchor constraintEqualToAnchor:self.headingCell.contentView.bottomAnchor constant:-14.0]
+    ]];
+
+    // 3: Options (Fluctuation, Radius, Keep Last, Show Real)
+    self.fluctuationCell = [self ls_createToggleCellWithBadgeSymbol:@"waveform.path"
+                                                         badgeColor:UIColor.systemPurpleColor
+                                                              title:@"Location Fluctuation"
+                                                           subtitle:@"Adds subtle randomized GPS drift"
+                                                            control:self.fluctuationSwitch];
+
+    self.fluctuationRadiusCell = [self ls_createCoordinateCellWithBadgeSymbol:@"circle.dashed"
+                                                                   badgeColor:[UIColor.systemPurpleColor colorWithAlphaComponent:0.75]
+                                                                        title:@"Drift Radius"
+                                                                    textField:self.fluctuationRadiusField];
+
+    self.keepLastSpoofCell = [self ls_createToggleCellWithBadgeSymbol:@"clock.arrow.circlepath"
+                                                           badgeColor:UIColor.systemGreenColor
+                                                                title:@"Keep Last Location"
+                                                             subtitle:@"Persist coordinate across app relaunches"
+                                                              control:self.keepLastSpoofSwitch];
+
+    self.showRealLocationCell = [self ls_createToggleCellWithBadgeSymbol:@"location.fill.viewfinder"
+                                                              badgeColor:UIColor.systemBlueColor
+                                                                   title:@"Show Real Location"
+                                                                subtitle:@"Display native GPS blue dot on map"
+                                                                 control:self.showRealLocationSwitch];
+
+    // 4: Action Button Cells (Apply, Stop, Cancel)
+    self.applyButtonCell = [self ls_createButtonCellWithView:self.applyButton];
+    self.stopButtonCell = [self ls_createButtonCellWithView:self.stopButton];
+    self.cancelButtonCell = [self ls_createButtonCellWithView:self.cancelButton];
+}
+
+- (UITableViewCell *)ls_createCoordinateCellWithBadgeSymbol:(NSString *)symbol
+                                                 badgeColor:(UIColor *)color
+                                                      title:(NSString *)title
+                                                  textField:(UITextField *)textField {
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    UIView *badge = [MapPickerViewController iconBadgeWithSymbolName:symbol backgroundColor:color];
+    [cell.contentView addSubview:badge];
+
+    UILabel *lbl = [[UILabel alloc] init];
+    lbl.translatesAutoresizingMaskIntoConstraints = NO;
+    lbl.text = title;
+    lbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
+    lbl.textColor = UIColor.labelColor;
+    [cell.contentView addSubview:lbl];
+
+    [textField removeFromSuperview];
+    textField.translatesAutoresizingMaskIntoConstraints = NO;
+    [cell.contentView addSubview:textField];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
+        [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
+
+        [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
+        [lbl.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
+        [lbl.widthAnchor constraintEqualToConstant:90.0],
+
+        [textField.leadingAnchor constraintEqualToAnchor:lbl.trailingAnchor constant:8.0],
+        [textField.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
+        [textField.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
+        [textField.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:6.0],
+        [textField.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-6.0],
+        [textField.heightAnchor constraintGreaterThanOrEqualToConstant:36.0]
+    ]];
+    return cell;
+}
+
+- (UITableViewCell *)ls_createToggleCellWithBadgeSymbol:(NSString *)symbol
+                                             badgeColor:(UIColor *)color
+                                                  title:(NSString *)title
+                                               subtitle:(NSString *)subtitle
+                                                control:(UIControl *)control {
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
+    cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    UIView *badge = [MapPickerViewController iconBadgeWithSymbolName:symbol backgroundColor:color];
+    [cell.contentView addSubview:badge];
+
+    UILabel *lbl = [[UILabel alloc] init];
+    lbl.translatesAutoresizingMaskIntoConstraints = NO;
+    lbl.text = title;
+    lbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
+    lbl.textColor = UIColor.labelColor;
+    [cell.contentView addSubview:lbl];
+
+    UILabel *sub = [[UILabel alloc] init];
+    sub.translatesAutoresizingMaskIntoConstraints = NO;
+    sub.text = subtitle;
+    sub.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightRegular];
+    sub.textColor = UIColor.secondaryLabelColor;
+    [cell.contentView addSubview:sub];
+
+    [control removeFromSuperview];
+    control.translatesAutoresizingMaskIntoConstraints = NO;
+    [cell.contentView addSubview:control];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
+        [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
+
+        [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
+        [lbl.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:10.0],
+
+        [sub.leadingAnchor constraintEqualToAnchor:lbl.leadingAnchor],
+        [sub.topAnchor constraintEqualToAnchor:lbl.bottomAnchor constant:2.0],
+        [sub.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-10.0],
+        [sub.trailingAnchor constraintLessThanOrEqualToAnchor:control.leadingAnchor constant:-8.0],
+
+        [control.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
+        [control.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor]
+    ]];
+    return cell;
+}
+
+- (UITableViewCell *)ls_createButtonCellWithView:(UIView *)buttonView {
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    cell.backgroundColor = UIColor.clearColor;
+    cell.backgroundConfiguration = [UIBackgroundConfiguration clearConfiguration];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    cell.separatorInset = UIEdgeInsetsMake(0.0, 10000.0, 0.0, 0.0);
+
+    [buttonView removeFromSuperview];
+    [cell.contentView addSubview:buttonView];
+    [NSLayoutConstraint activateConstraints:@[
+        [buttonView.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor],
+        [buttonView.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor],
+        [buttonView.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:4.0],
+        [buttonView.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-4.0],
+        [buttonView.heightAnchor constraintEqualToConstant:48.0]
+    ]];
+    return cell;
 }
 
 #pragma mark - Map
@@ -521,18 +836,23 @@ static const CGFloat kLSMapHeight = 220.0;
 }
 
 - (void)updateCoordinateLabel {
-    // If the preview cell is visible, reload its section to update formatted coordinate readout
-    if (self.panelTab == LSMapPickerPanelTabMap && self.coordinateMode == LSMapPickerCoordinateModeStatic) {
-        [self.tableView reloadRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:0 inSection:0]] withRowAnimation:UITableViewRowAnimationNone];
-    }
+    self.previewCoordLabel.text = [NSString stringWithFormat:@"%@%.6f, %@%.6f",
+                                   self.selectedCoordinate.latitude >= 0 ? @"N " : @"S ",
+                                   fabs(self.selectedCoordinate.latitude),
+                                   self.selectedCoordinate.longitude >= 0 ? @"E " : @"W ",
+                                   fabs(self.selectedCoordinate.longitude)];
 }
 
 - (void)movePinToCoordinate:(CLLocationCoordinate2D)coordinate animated:(BOOL)animated {
     self.selectedCoordinate = coordinate;
     self.hasSelectedCoordinate = YES;
     self.suppressFieldSync = YES;
-    self.latitudeField.text = [NSString stringWithFormat:@"%.6f", coordinate.latitude];
-    self.longitudeField.text = [NSString stringWithFormat:@"%.6f", coordinate.longitude];
+    if (!self.latitudeField.isFirstResponder) {
+        self.latitudeField.text = [NSString stringWithFormat:@"%.6f", coordinate.latitude];
+    }
+    if (!self.longitudeField.isFirstResponder) {
+        self.longitudeField.text = [NSString stringWithFormat:@"%.6f", coordinate.longitude];
+    }
     self.suppressFieldSync = NO;
     [self updateCoordinateLabel];
     [self updatePinOnMapAnimated:animated];
@@ -554,10 +874,15 @@ static const CGFloat kLSMapHeight = 220.0;
 #pragma mark - Validation & Input
 
 - (nullable NSNumber *)ls_parsedCoordinateComponentFromText:(NSString *)text {
+    if (!text || text.length == 0) {
+        return nil;
+    }
     NSString *trimmed = [text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
     if (trimmed.length == 0) {
         return nil;
     }
+
+    NSString *normalized = [trimmed stringByReplacingOccurrencesOfString:@"," withString:@"."];
 
     static NSNumberFormatter *formatter = nil;
     static dispatch_once_t onceToken;
@@ -567,8 +892,20 @@ static const CGFloat kLSMapHeight = 220.0;
         formatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
     });
 
-    NSString *normalized = [trimmed stringByReplacingOccurrencesOfString:@"," withString:@"."];
-    return [formatter numberFromString:normalized];
+    NSNumber *num = [formatter numberFromString:normalized];
+    if (num) {
+        return num;
+    }
+
+    // Resilient scanner for strings containing units (e.g. "50 m", "30 km/h")
+    NSScanner *scanner = [NSScanner scannerWithString:normalized];
+    scanner.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+    double val = 0.0;
+    if ([scanner scanDouble:&val]) {
+        return @(val);
+    }
+
+    return nil;
 }
 
 - (BOOL)applyFieldsToCoordinate {
@@ -579,18 +916,20 @@ static const CGFloat kLSMapHeight = 220.0;
     NSNumber *latitudeNumber = [self ls_parsedCoordinateComponentFromText:self.latitudeField.text];
     NSNumber *longitudeNumber = [self ls_parsedCoordinateComponentFromText:self.longitudeField.text];
     if (!latitudeNumber || !longitudeNumber) {
-        [self showInvalidCoordinateFeedback];
         return NO;
     }
 
     double latitude = latitudeNumber.doubleValue;
     double longitude = longitudeNumber.doubleValue;
     if (latitude < -90.0 || latitude > 90.0 || longitude < -180.0 || longitude > 180.0) {
-        [self showInvalidCoordinateFeedback];
         return NO;
     }
 
-    [self movePinToCoordinate:CLLocationCoordinate2DMake(latitude, longitude) animated:YES];
+    CLLocationCoordinate2D coord = CLLocationCoordinate2DMake(latitude, longitude);
+    self.selectedCoordinate = coord;
+    self.hasSelectedCoordinate = YES;
+    [self updateCoordinateLabel];
+    [self updatePinOnMapAnimated:YES];
     return YES;
 }
 
@@ -598,8 +937,7 @@ static const CGFloat kLSMapHeight = 220.0;
     UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
     [feedback impactOccurred];
 
-    // Provide visual shake animation on coordinates section
-    UITableViewCell *latCell = [self.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:1]];
+    UITableViewCell *latCell = self.latitudeCell;
     if (latCell) {
         CAKeyframeAnimation *shake = [CAKeyframeAnimation animationWithKeyPath:@"transform.translation.x"];
         shake.values = @[@0, @-8, @8, @-6, @6, @0];
@@ -666,24 +1004,25 @@ static const CGFloat kLSMapHeight = 220.0;
 }
 
 - (void)handleFluctuationToggle {
+    self.fluctuationSwitch.userInteractionEnabled = NO;
     PersistenceManager *store = [PersistenceManager shared];
     store.fluctuationEnabled = self.fluctuationSwitch.isOn;
 
-    // Smoothly animate insertion or deletion of the radius row in Inset Grouped style
     NSIndexPath *radiusPath = [NSIndexPath indexPathForRow:1 inSection:3];
-    [self.tableView beginUpdates];
-    if (self.fluctuationSwitch.isOn) {
-        [self.tableView insertRowsAtIndexPaths:@[radiusPath] withRowAnimation:UITableViewRowAnimationFade];
-    } else {
-        [self.tableView deleteRowsAtIndexPaths:@[radiusPath] withRowAnimation:UITableViewRowAnimationFade];
-    }
-    [self.tableView endUpdates];
-
-    if (self.fluctuationSwitch.isOn) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [self.fluctuationRadiusField becomeFirstResponder];
-        });
-    }
+    __weak typeof(self) weakSelf = self;
+    [self.tableView performBatchUpdates:^{
+        if (weakSelf.fluctuationSwitch.isOn) {
+            [weakSelf.tableView insertRowsAtIndexPaths:@[radiusPath] withRowAnimation:UITableViewRowAnimationFade];
+        } else {
+            [weakSelf.tableView deleteRowsAtIndexPaths:@[radiusPath] withRowAnimation:UITableViewRowAnimationFade];
+        }
+    } completion:^(BOOL finished) {
+        (void)finished;
+        weakSelf.fluctuationSwitch.userInteractionEnabled = YES;
+        if (weakSelf.fluctuationSwitch.isOn) {
+            [weakSelf.fluctuationRadiusField becomeFirstResponder];
+        }
+    }];
 }
 
 - (void)handleFluctuationRadiusChanged {
@@ -862,7 +1201,11 @@ static const CGFloat kLSMapHeight = 220.0;
 
 - (void)searchBarTextDidEndEditing:(UISearchBar *)searchBar {
     searchBar.showsCancelButton = NO;
-    [self hideSearchSuggestions];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (!self.searchBar.isFirstResponder) {
+            [self hideSearchSuggestions];
+        }
+    });
 }
 
 - (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar {
@@ -889,9 +1232,10 @@ static const CGFloat kLSMapHeight = 220.0;
 
 - (void)configureKeyboardToolbar {
     UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 0, 0, 44)];
+    UIBarButtonItem *plusMinus = [[UIBarButtonItem alloc] initWithTitle:@"+/-" style:UIBarButtonItemStylePlain target:self action:@selector(toggleSignForActiveField)];
     UIBarButtonItem *flex = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     UIBarButtonItem *done = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(dismissKeyboard)];
-    toolbar.items = @[flex, done];
+    toolbar.items = @[plusMinus, flex, done];
 
     self.latitudeField.inputAccessoryView = toolbar;
     self.longitudeField.inputAccessoryView = toolbar;
@@ -900,9 +1244,34 @@ static const CGFloat kLSMapHeight = 220.0;
     self.customSpeedField.inputAccessoryView = toolbar;
 }
 
+- (void)toggleSignForActiveField {
+    UITextField *target = nil;
+    if (self.latitudeField.isFirstResponder) target = self.latitudeField;
+    else if (self.longitudeField.isFirstResponder) target = self.longitudeField;
+    if (!target) return;
+
+    NSString *text = target.text ?: @"";
+    if ([text hasPrefix:@"-"]) {
+        target.text = [text substringFromIndex:1];
+    } else {
+        target.text = [@"-" stringByAppendingString:text];
+    }
+    [self textFieldDidChange:target];
+}
+
 - (void)dismissKeyboard {
     [self.view endEditing:YES];
     [self hideSearchSuggestions];
+}
+
+- (void)textFieldDidBeginEditing:(UITextField *)textField {
+    if (textField == self.altitudeField || textField == self.fluctuationRadiusField) {
+        NSString *raw = [textField.text stringByReplacingOccurrencesOfString:@" m" withString:@""];
+        textField.text = [raw stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+    } else if (textField == self.customSpeedField) {
+        NSString *raw = [textField.text stringByReplacingOccurrencesOfString:@" km/h" withString:@""];
+        textField.text = [raw stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+    }
 }
 
 - (void)textFieldDidChange:(UITextField *)textField {
@@ -912,24 +1281,66 @@ static const CGFloat kLSMapHeight = 220.0;
         textField.textColor = valid ? UIColor.labelColor : UIColor.systemRedColor;
         return;
     }
-    [self applyFieldsToCoordinate];
+
+    if (textField == self.latitudeField || textField == self.longitudeField) {
+        [self applyFieldsToCoordinate];
+    }
+}
+
+- (void)textFieldDidEndEditing:(UITextField *)textField {
+    if (textField == self.latitudeField || textField == self.longitudeField) {
+        if (![self applyFieldsToCoordinate]) {
+            [self showInvalidCoordinateFeedback];
+            [self syncFieldsFromCoordinate];
+        } else {
+            [self syncFieldsFromCoordinate];
+        }
+    } else if (textField == self.altitudeField) {
+        NSNumber *alt = [self ls_parsedCoordinateComponentFromText:textField.text];
+        if (alt && alt.doubleValue >= -500.0 && alt.doubleValue <= 10000.0) {
+            [PersistenceManager shared].altitude = alt.doubleValue;
+            textField.text = [NSString stringWithFormat:@"%.0f m", alt.doubleValue];
+        } else {
+            textField.text = [NSString stringWithFormat:@"%.0f m", [PersistenceManager shared].altitude];
+        }
+    } else if (textField == self.fluctuationRadiusField) {
+        [self handleFluctuationRadiusChanged];
+    } else if (textField == self.customSpeedField) {
+        NSNumber *spd = [self ls_parsedCoordinateComponentFromText:textField.text];
+        double val = (spd && spd.doubleValue >= 1.0 && spd.doubleValue <= 500.0) ? spd.doubleValue : 30.0;
+        [LSRouteSimulator shared].customSpeedKmh = val;
+        textField.text = [NSString stringWithFormat:@"%.0f km/h", val];
+        textField.textColor = UIColor.labelColor;
+    }
 }
 
 - (void)ls_keyboardWillShow:(NSNotification *)note {
     CGRect kbFrame = [note.userInfo[UIKeyboardFrameEndUserInfoKey] CGRectValue];
-    CGFloat kbHeight = kbFrame.size.height;
-    UIEdgeInsets insets = self.tableView.contentInset;
-    insets.bottom = kbHeight;
-    self.tableView.contentInset = insets;
-    self.tableView.scrollIndicatorInsets = insets;
+    CGRect viewKbFrame = [self.view convertRect:kbFrame fromView:nil];
+    CGFloat overlap = CGRectGetMaxY(self.tableView.frame) - viewKbFrame.origin.y;
+    CGFloat bottomInset = MAX(overlap, 0.0);
+
+    NSTimeInterval duration = [note.userInfo[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
+    UIViewAnimationOptions curve = (UIViewAnimationOptions)([note.userInfo[UIKeyboardAnimationCurveUserInfoKey] integerValue] << 16);
+
+    [UIView animateWithDuration:duration delay:0 options:curve animations:^{
+        UIEdgeInsets insets = self.tableView.contentInset;
+        insets.bottom = bottomInset;
+        self.tableView.contentInset = insets;
+        self.tableView.scrollIndicatorInsets = insets;
+    } completion:nil];
 }
 
 - (void)ls_keyboardWillHide:(NSNotification *)note {
-    (void)note;
-    UIEdgeInsets insets = self.tableView.contentInset;
-    insets.bottom = 0.0;
-    self.tableView.contentInset = insets;
-    self.tableView.scrollIndicatorInsets = insets;
+    NSTimeInterval duration = [note.userInfo[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
+    UIViewAnimationOptions curve = (UIViewAnimationOptions)([note.userInfo[UIKeyboardAnimationCurveUserInfoKey] integerValue] << 16);
+
+    [UIView animateWithDuration:duration delay:0 options:curve animations:^{
+        UIEdgeInsets insets = self.tableView.contentInset;
+        insets.bottom = 0.0;
+        self.tableView.contentInset = insets;
+        self.tableView.scrollIndicatorInsets = insets;
+    } completion:nil];
 }
 
 #pragma mark - Status Pill
@@ -996,6 +1407,7 @@ static const CGFloat kLSMapHeight = 220.0;
 }
 
 - (void)handleCancel {
+    LSSetHooksBypassed(NO);
     [self dismissViewControllerAnimated:YES completion:nil];
 }
 
@@ -1042,6 +1454,16 @@ static const CGFloat kLSMapHeight = 220.0;
     [self ls_handleRouteMapTap:coordinate];
 }
 
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    if (gestureRecognizer == self.mapLongPressGesture) {
+        if ([touch.view isKindOfClass:[MKAnnotationView class]] ||
+            [touch.view.superview isKindOfClass:[MKAnnotationView class]]) {
+            return NO;
+        }
+    }
+    return YES;
+}
+
 - (void)mapViewDidFinishLoadingMap:(MKMapView *)mapView {
     (void)mapView;
     [self.mapSpinner stopAnimating];
@@ -1069,7 +1491,7 @@ static const CGFloat kLSMapHeight = 220.0;
         view.canShowCallout = YES;
         view.draggable = YES;
         view.markerTintColor = UIColor.systemRedColor;
-        view.glyphImage = [UIImage systemImageNamed:@"mappin.and.ellipse"];
+        view.glyphImage = [MapPickerViewController systemImageNamedWithFallback:@"mappin.and.ellipse" configuration:nil];
         view.displayPriority = MKFeatureDisplayPriorityRequired;
     } else {
         view.annotation = annotation;
@@ -1106,11 +1528,6 @@ static const CGFloat kLSMapHeight = 220.0;
     }
 
     // Static mode: 5 sections
-    // 0: Target Coordinate Preview & Bookmark button
-    // 1: Coordinate Inputs (Lat, Lon, Alt) with Apple SF symbols
-    // 2: Heading & Bearing (Heading slider)
-    // 3: Options (Fluctuation, Radius if on, Keep Last, Show Real)
-    // 4: Action Buttons (Apply, Stop if active, Cancel)
     return 5;
 }
 
@@ -1173,7 +1590,7 @@ static const CGFloat kLSMapHeight = 220.0;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    // Search suggestions table view cells
+    // Search suggestions
     if (tableView == self.suggestionsTableView) {
         UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"LSSearchSuggestionCell" forIndexPath:indexPath];
         if (indexPath.row < (NSInteger)self.searchCompletions.count) {
@@ -1184,7 +1601,7 @@ static const CGFloat kLSMapHeight = 220.0;
             content.textProperties.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightSemibold];
             content.secondaryTextProperties.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightRegular];
             content.secondaryTextProperties.color = UIColor.secondaryLabelColor;
-            content.image = [UIImage systemImageNamed:@"mappin.circle.fill"];
+            content.image = [MapPickerViewController systemImageNamedWithFallback:@"mappin.circle.fill" configuration:nil];
             content.imageProperties.tintColor = UIColor.systemBlueColor;
             cell.contentConfiguration = content;
         }
@@ -1202,318 +1619,36 @@ static const CGFloat kLSMapHeight = 220.0;
         return [self ls_routeCellForRowAtIndexPath:indexPath];
     }
 
-    // Static mode
-    return [self ls_staticCellForIndexPath:indexPath];
-}
-
-- (UITableViewCell *)ls_staticCellForIndexPath:(NSIndexPath *)indexPath {
+    // Static mode: Return retained static cells
     switch (indexPath.section) {
-        case 0: { // Section 0: Target Coordinate Preview & Bookmark Button
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        case 0:
+            return self.previewCell;
 
-            UIView *badge = [MapPickerViewController iconBadgeWithSymbolName:@"mappin.and.ellipse" backgroundColor:UIColor.systemRedColor];
-            badge.translatesAutoresizingMaskIntoConstraints = NO;
-            [cell.contentView addSubview:badge];
+        case 1:
+            if (indexPath.row == 0) return self.latitudeCell;
+            if (indexPath.row == 1) return self.longitudeCell;
+            return self.altitudeCell;
 
-            UILabel *title = [[UILabel alloc] init];
-            title.translatesAutoresizingMaskIntoConstraints = NO;
-            title.text = @"Target Coordinate";
-            title.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightSemibold];
-            title.textColor = UIColor.labelColor;
-            [cell.contentView addSubview:title];
+        case 2:
+            return self.headingCell;
 
-            UILabel *coordLabel = [[UILabel alloc] init];
-            coordLabel.translatesAutoresizingMaskIntoConstraints = NO;
-            coordLabel.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
-            coordLabel.textColor = UIColor.secondaryLabelColor;
-            coordLabel.text = [NSString stringWithFormat:@"%@%.6f, %@%.6f",
-                               self.selectedCoordinate.latitude >= 0 ? @"N " : @"S ",
-                               fabs(self.selectedCoordinate.latitude),
-                               self.selectedCoordinate.longitude >= 0 ? @"E " : @"W ",
-                               fabs(self.selectedCoordinate.longitude)];
-            [cell.contentView addSubview:coordLabel];
-
-            UIButton *bmBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-            bmBtn.translatesAutoresizingMaskIntoConstraints = NO;
-            UIImage *bmIcon = [UIImage systemImageNamed:@"bookmark.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:18.0 weight:UIFontWeightSemibold]];
-            [bmBtn setImage:bmIcon forState:UIControlStateNormal];
-            bmBtn.tintColor = UIColor.systemYellowColor;
-            bmBtn.accessibilityLabel = @"Save Bookmark";
-            [bmBtn addTarget:self action:@selector(handleBookmarkSaveTapped) forControlEvents:UIControlEventTouchUpInside];
-            [cell.contentView addSubview:bmBtn];
-
-            [NSLayoutConstraint activateConstraints:@[
-                [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-
-                [title.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
-                [title.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:10.0],
-
-                [coordLabel.leadingAnchor constraintEqualToAnchor:title.leadingAnchor],
-                [coordLabel.topAnchor constraintEqualToAnchor:title.bottomAnchor constant:3.0],
-                [coordLabel.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-10.0],
-                [coordLabel.trailingAnchor constraintLessThanOrEqualToAnchor:bmBtn.leadingAnchor constant:-8.0],
-
-                [bmBtn.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-                [bmBtn.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-                [bmBtn.widthAnchor constraintEqualToConstant:36.0],
-                [bmBtn.heightAnchor constraintEqualToConstant:36.0]
-            ]];
-            return cell;
-        }
-
-        case 1: { // Section 1: Coordinate Inputs (Lat, Lon, Alt)
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-            UIView *badge = nil;
-            NSString *labelText = @"";
-            UITextField *inputField = nil;
-
-            if (indexPath.row == 0) {
-                badge = [MapPickerViewController iconBadgeWithSymbolName:@"location.north.fill" backgroundColor:UIColor.systemBlueColor];
-                labelText = @"Latitude";
-                inputField = self.latitudeField;
-            } else if (indexPath.row == 1) {
-                badge = [MapPickerViewController iconBadgeWithSymbolName:@"globe.americas.fill" backgroundColor:UIColor.systemTealColor];
-                labelText = @"Longitude";
-                inputField = self.longitudeField;
+        case 3: {
+            if (indexPath.row == 0) return self.fluctuationCell;
+            if (self.fluctuationSwitch.isOn) {
+                if (indexPath.row == 1) return self.fluctuationRadiusCell;
+                if (indexPath.row == 2) return self.keepLastSpoofCell;
+                return self.showRealLocationCell;
             } else {
-                badge = [MapPickerViewController iconBadgeWithSymbolName:@"mountain.2.fill" backgroundColor:UIColor.systemOrangeColor];
-                labelText = @"Altitude";
-                inputField = self.altitudeField;
-            }
-
-            badge.translatesAutoresizingMaskIntoConstraints = NO;
-            [cell.contentView addSubview:badge];
-
-            UILabel *lbl = [[UILabel alloc] init];
-            lbl.translatesAutoresizingMaskIntoConstraints = NO;
-            lbl.text = labelText;
-            lbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
-            lbl.textColor = UIColor.labelColor;
-            [cell.contentView addSubview:lbl];
-
-            [inputField removeFromSuperview];
-            inputField.translatesAutoresizingMaskIntoConstraints = NO;
-            [cell.contentView addSubview:inputField];
-
-            [NSLayoutConstraint activateConstraints:@[
-                [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-
-                [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
-                [lbl.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-                [lbl.widthAnchor constraintEqualToConstant:85.0],
-
-                [inputField.leadingAnchor constraintEqualToAnchor:lbl.trailingAnchor constant:8.0],
-                [inputField.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-                [inputField.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-                [inputField.heightAnchor constraintEqualToConstant:40.0],
-                [cell.contentView.heightAnchor constraintGreaterThanOrEqualToConstant:48.0]
-            ]];
-            return cell;
-        }
-
-        case 2: { // Section 2: Heading Slider & Direction
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-            UIView *badge = [MapPickerViewController iconBadgeWithSymbolName:@"safari.fill" backgroundColor:UIColor.systemIndigoColor];
-            badge.translatesAutoresizingMaskIntoConstraints = NO;
-            [cell.contentView addSubview:badge];
-
-            UILabel *lbl = [[UILabel alloc] init];
-            lbl.translatesAutoresizingMaskIntoConstraints = NO;
-            lbl.text = @"Heading";
-            lbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
-            lbl.textColor = UIColor.labelColor;
-            [cell.contentView addSubview:lbl];
-
-            [self.headingValueLabel removeFromSuperview];
-            self.headingValueLabel.translatesAutoresizingMaskIntoConstraints = NO;
-            [cell.contentView addSubview:self.headingValueLabel];
-
-            [self.headingSlider removeFromSuperview];
-            self.headingSlider.translatesAutoresizingMaskIntoConstraints = NO;
-            [cell.contentView addSubview:self.headingSlider];
-
-            [NSLayoutConstraint activateConstraints:@[
-                [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                [badge.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:12.0],
-
-                [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
-                [lbl.centerYAnchor constraintEqualToAnchor:badge.centerYAnchor],
-
-                [self.headingValueLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-                [self.headingValueLabel.centerYAnchor constraintEqualToAnchor:badge.centerYAnchor],
-                [self.headingValueLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:lbl.trailingAnchor constant:8.0],
-
-                [self.headingSlider.topAnchor constraintEqualToAnchor:badge.bottomAnchor constant:12.0],
-                [self.headingSlider.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                [self.headingSlider.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-                [self.headingSlider.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-14.0]
-            ]];
-            return cell;
-        }
-
-        case 3: { // Section 3: Options (Fluctuation, Radius, Keep Last, Show Real)
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-            NSInteger row = indexPath.row;
-            // If fluctuation is ON: row 0=Fluctuation, 1=Radius, 2=Keep Last, 3=Show Real
-            // If fluctuation is OFF: row 0=Fluctuation, 1=Keep Last, 2=Show Real
-            if (row == 0) {
-                UIView *badge = [MapPickerViewController iconBadgeWithSymbolName:@"waveform.path" backgroundColor:UIColor.systemPurpleColor];
-                badge.translatesAutoresizingMaskIntoConstraints = NO;
-                [cell.contentView addSubview:badge];
-
-                UILabel *lbl = [[UILabel alloc] init];
-                lbl.translatesAutoresizingMaskIntoConstraints = NO;
-                lbl.text = @"Location Fluctuation";
-                lbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
-                lbl.textColor = UIColor.labelColor;
-                [cell.contentView addSubview:lbl];
-
-                UILabel *sub = [[UILabel alloc] init];
-                sub.translatesAutoresizingMaskIntoConstraints = NO;
-                sub.text = @"Adds subtle randomized GPS drift";
-                sub.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightRegular];
-                sub.textColor = UIColor.secondaryLabelColor;
-                [cell.contentView addSubview:sub];
-
-                [self.fluctuationSwitch removeFromSuperview];
-                self.fluctuationSwitch.translatesAutoresizingMaskIntoConstraints = NO;
-                [cell.contentView addSubview:self.fluctuationSwitch];
-
-                [NSLayoutConstraint activateConstraints:@[
-                    [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                    [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-
-                    [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
-                    [lbl.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:10.0],
-
-                    [sub.leadingAnchor constraintEqualToAnchor:lbl.leadingAnchor],
-                    [sub.topAnchor constraintEqualToAnchor:lbl.bottomAnchor constant:2.0],
-                    [sub.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-10.0],
-                    [sub.trailingAnchor constraintLessThanOrEqualToAnchor:self.fluctuationSwitch.leadingAnchor constant:-8.0],
-
-                    [self.fluctuationSwitch.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-                    [self.fluctuationSwitch.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor]
-                ]];
-                return cell;
-            } else if (row == 1 && self.fluctuationSwitch.isOn) {
-                // Radius input
-                UIView *badge = [MapPickerViewController iconBadgeWithSymbolName:@"circle.dashed" backgroundColor:[UIColor.systemPurpleColor colorWithAlphaComponent:0.75]];
-                badge.translatesAutoresizingMaskIntoConstraints = NO;
-                [cell.contentView addSubview:badge];
-
-                UILabel *lbl = [[UILabel alloc] init];
-                lbl.translatesAutoresizingMaskIntoConstraints = NO;
-                lbl.text = @"Drift Radius (m)";
-                lbl.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightRegular];
-                lbl.textColor = UIColor.labelColor;
-                [cell.contentView addSubview:lbl];
-
-                [self.fluctuationRadiusField removeFromSuperview];
-                self.fluctuationRadiusField.translatesAutoresizingMaskIntoConstraints = NO;
-                [cell.contentView addSubview:self.fluctuationRadiusField];
-
-                [NSLayoutConstraint activateConstraints:@[
-                    [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                    [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-
-                    [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
-                    [lbl.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-
-                    [self.fluctuationRadiusField.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-                    [self.fluctuationRadiusField.leadingAnchor constraintEqualToAnchor:lbl.trailingAnchor constant:8.0],
-                    [self.fluctuationRadiusField.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-                    [cell.contentView.heightAnchor constraintGreaterThanOrEqualToConstant:46.0]
-                ]];
-                return cell;
-            } else {
-                // Keep Last or Show Real
-                BOOL isKeepLast = (self.fluctuationSwitch.isOn ? row == 2 : row == 1);
-                UIView *badge = isKeepLast ?
-                    [MapPickerViewController iconBadgeWithSymbolName:@"clock.arrow.circlepath" backgroundColor:UIColor.systemGreenColor] :
-                    [MapPickerViewController iconBadgeWithSymbolName:@"location.fill.viewfinder" backgroundColor:UIColor.systemBlueColor];
-                badge.translatesAutoresizingMaskIntoConstraints = NO;
-                [cell.contentView addSubview:badge];
-
-                UILabel *lbl = [[UILabel alloc] init];
-                lbl.translatesAutoresizingMaskIntoConstraints = NO;
-                lbl.text = isKeepLast ? @"Keep Last Location" : @"Show Real Location";
-                lbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
-                lbl.textColor = UIColor.labelColor;
-                [cell.contentView addSubview:lbl];
-
-                UILabel *sub = [[UILabel alloc] init];
-                sub.translatesAutoresizingMaskIntoConstraints = NO;
-                sub.text = isKeepLast ? @"Persist coordinate across app relaunches" : @"Display native GPS blue dot on map";
-                sub.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightRegular];
-                sub.textColor = UIColor.secondaryLabelColor;
-                [cell.contentView addSubview:sub];
-
-                UISwitch *sw = isKeepLast ? self.keepLastSpoofSwitch : self.showRealLocationSwitch;
-                [sw removeFromSuperview];
-                sw.translatesAutoresizingMaskIntoConstraints = NO;
-                [cell.contentView addSubview:sw];
-
-                [NSLayoutConstraint activateConstraints:@[
-                    [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                    [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-
-                    [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
-                    [lbl.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:10.0],
-
-                    [sub.leadingAnchor constraintEqualToAnchor:lbl.leadingAnchor],
-                    [sub.topAnchor constraintEqualToAnchor:lbl.bottomAnchor constant:2.0],
-                    [sub.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-10.0],
-                    [sub.trailingAnchor constraintLessThanOrEqualToAnchor:sw.leadingAnchor constant:-8.0],
-
-                    [sw.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-                    [sw.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor]
-                ]];
-                return cell;
+                if (indexPath.row == 1) return self.keepLastSpoofCell;
+                return self.showRealLocationCell;
             }
         }
 
-        case 4: { // Section 4: Action Buttons (Apply, Stop if active, Cancel)
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.clearColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
+        case 4: {
             BOOL isSpoofingActive = [[PersistenceManager shared] isSpoofingEnabled];
-            NSInteger row = indexPath.row;
-
-            UIView *btnView = nil;
-            if (row == 0) {
-                [self.applyButton removeFromSuperview];
-                btnView = self.applyButton;
-            } else if (row == 1 && isSpoofingActive) {
-                [self.stopButton removeFromSuperview];
-                btnView = self.stopButton;
-            } else {
-                [self.cancelButton removeFromSuperview];
-                btnView = self.cancelButton;
-            }
-
-            [cell.contentView addSubview:btnView];
-            [NSLayoutConstraint activateConstraints:@[
-                [btnView.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor],
-                [btnView.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor],
-                [btnView.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:4.0],
-                [btnView.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-4.0],
-                [btnView.heightAnchor constraintEqualToConstant:48.0]
-            ]];
-            return cell;
+            if (indexPath.row == 0) return self.applyButtonCell;
+            if (indexPath.row == 1 && isSpoofingActive) return self.stopButtonCell;
+            return self.cancelButtonCell;
         }
 
         default:

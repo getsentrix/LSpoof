@@ -19,13 +19,34 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
 - (void)updatePanelTabVisibility {
     BOOL mapTab = (self.panelTab == LSMapPickerPanelTabMap);
 
-    self.coordinateModeSegment.hidden = !mapTab;
-    self.searchBar.hidden = !mapTab;
+    if (mapTab) {
+        self.searchBar.hidden = NO;
+        self.coordinateModeSegment.hidden = NO;
+    }
 
-    [self.tableHeaderContainer layoutIfNeeded];
-    CGFloat headerHeight = [self.tableHeaderContainer systemLayoutSizeFittingSize:UILayoutFittingCompressedSize].height;
-    self.tableHeaderContainer.frame = CGRectMake(0, 0, self.view.bounds.size.width, headerHeight);
-    self.tableView.tableHeaderView = self.tableHeaderContainer;
+    [UIView animateWithDuration:0.25 animations:^{
+        if (mapTab) {
+            self.searchBarHeightConstraint.constant = 48.0;
+            self.searchBarBottomConstraint.constant = 6.0;
+            self.coordinateModeHeightConstraint.constant = 32.0;
+            self.coordinateModeBottomConstraint.constant = -8.0;
+            self.searchBar.alpha = 1.0;
+            self.coordinateModeSegment.alpha = 1.0;
+        } else {
+            self.searchBarHeightConstraint.constant = 0.0;
+            self.searchBarBottomConstraint.constant = 0.0;
+            self.coordinateModeHeightConstraint.constant = 0.0;
+            self.coordinateModeBottomConstraint.constant = 0.0;
+            self.searchBar.alpha = 0.0;
+            self.coordinateModeSegment.alpha = 0.0;
+        }
+        [self ls_updateTableHeaderLayout];
+    } completion:^(BOOL finished) {
+        (void)finished;
+        self.searchBar.hidden = !mapTab;
+        self.coordinateModeSegment.hidden = !mapTab;
+        [self ls_updateTableHeaderLayout];
+    }];
 
     if (mapTab) {
         [self updateCoordinateModeVisibility];
@@ -48,7 +69,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     [self presentSaveBookmarkAlertWithSuggestedName:nil coordinate:self.selectedCoordinate];
 }
 
-- (void)presentSaveBookmarkAlertWithSuggestedName:(NSString *)name coordinate:(CLLocationCoordinate2D)coordinate {
+- (void)presentSaveBookmarkAlertWithSuggestedName:(nullable NSString *)name coordinate:(CLLocationCoordinate2D)coordinate {
     NSString *suggested = name.length > 0 ? name : @"Location";
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Save Bookmark"
@@ -170,7 +191,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         }
         content.secondaryTextProperties.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
         content.secondaryTextProperties.color = UIColor.secondaryLabelColor;
-        content.image = [UIImage systemImageNamed:@"clock.fill"];
+        content.image = [MapPickerViewController systemImageNamedWithFallback:@"clock.fill" configuration:nil];
         content.imageProperties.tintColor = UIColor.systemBlueColor;
         cell.contentConfiguration = content;
         cell.accessoryView = nil;
@@ -192,7 +213,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         }
         content.secondaryTextProperties.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
         content.secondaryTextProperties.color = UIColor.secondaryLabelColor;
-        content.image = [UIImage systemImageNamed:@"bookmark.fill"];
+        content.image = [MapPickerViewController systemImageNamedWithFallback:@"bookmark.fill" configuration:nil];
         content.imageProperties.tintColor = UIColor.systemYellowColor;
         cell.contentConfiguration = content;
 
@@ -204,7 +225,6 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         applyBtn.backgroundColor = UIColor.systemBlueColor;
         applyBtn.layer.cornerRadius = 15.0;
         applyBtn.layer.cornerCurve = kCACornerCurveContinuous;
-        applyBtn.tag = indexPath.row;
         [applyBtn addTarget:self action:@selector(ls_applyBookmarkFromButton:) forControlEvents:UIControlEventTouchUpInside];
         cell.accessoryView = applyBtn;
         cell.accessoryType = UITableViewCellAccessoryNone;
@@ -214,6 +234,10 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
 }
 
 - (void)ls_bookmarksDidSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (self.tableView.isEditing) {
+        return;
+    }
+
     CLLocationCoordinate2D coordinate = kCLLocationCoordinate2DInvalid;
 
     if (indexPath.section == LSBookmarksSectionRecents) {
@@ -277,17 +301,28 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
 - (void)ls_toggleBookmarksEditMode {
     self.bookmarksEditMode = !self.bookmarksEditMode;
     [self.tableView setEditing:self.bookmarksEditMode animated:YES];
-    [self.tableView reloadData];
+
+    UIView *header = [self.tableView headerViewForSection:LSBookmarksSectionSaved];
+    for (UIView *sub in header.subviews) {
+        if ([sub isKindOfClass:[UIButton class]]) {
+            [(UIButton *)sub setTitle:(self.bookmarksEditMode ? @"Done" : @"Edit") forState:UIControlStateNormal];
+        }
+    }
 }
 
 - (void)ls_applyBookmarkFromButton:(UIButton *)sender {
-    NSArray<LSBookmark *> *bookmarks = [BookmarksManager shared].allBookmarks;
-    NSUInteger index = (NSUInteger)sender.tag;
-    if (index >= bookmarks.count) {
+    CGPoint buttonPosition = [sender convertPoint:CGPointZero toView:self.tableView];
+    NSIndexPath *indexPath = [self.tableView indexPathForRowAtPoint:buttonPosition];
+    if (!indexPath || indexPath.section != LSBookmarksSectionSaved) {
         return;
     }
 
-    LSBookmark *bookmark = bookmarks[index];
+    NSArray<LSBookmark *> *bookmarks = [BookmarksManager shared].allBookmarks;
+    if (indexPath.row >= (NSInteger)bookmarks.count) {
+        return;
+    }
+
+    LSBookmark *bookmark = bookmarks[indexPath.row];
     PersistenceManager *store = [PersistenceManager shared];
     if (![store setSpoofCoordinate:bookmark.coordinate enabled:YES]) {
         [self playRouteFailureHaptic];

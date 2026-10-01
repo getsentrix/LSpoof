@@ -17,7 +17,8 @@
     [self.getRouteButton setTitle:@"  Get Route Directions" forState:UIControlStateNormal];
     [self.getRouteButton setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
     self.getRouteButton.titleLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightBold];
-    UIImage *routeIcon = [UIImage systemImageNamed:@"arrow.triangle.turn.up.right.diamond.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:16.0 weight:UIFontWeightBold]];
+    UIImage *routeIcon = [MapPickerViewController systemImageNamedWithFallback:@"arrow.triangle.turn.up.right.diamond.fill"
+                                                                 configuration:[UIImageSymbolConfiguration configurationWithPointSize:16.0 weight:UIFontWeightBold]];
     [self.getRouteButton setImage:routeIcon forState:UIControlStateNormal];
     self.getRouteButton.tintColor = UIColor.whiteColor;
     self.getRouteButton.backgroundColor = UIColor.systemBlueColor;
@@ -44,12 +45,13 @@
     // Custom speed text field
     self.customSpeedField = [[UITextField alloc] init];
     self.customSpeedField.translatesAutoresizingMaskIntoConstraints = NO;
-    self.customSpeedField.placeholder = @"30 km/h";
+    self.customSpeedField.placeholder = @"e.g. 30 km/h";
     self.customSpeedField.keyboardType = UIKeyboardTypeDecimalPad;
-    self.customSpeedField.text = @"30";
+    self.customSpeedField.text = @"30 km/h";
     self.customSpeedField.textAlignment = NSTextAlignmentRight;
     self.customSpeedField.font = [UIFont monospacedDigitSystemFontOfSize:15.0 weight:UIFontWeightRegular];
     self.customSpeedField.textColor = UIColor.labelColor;
+    self.customSpeedField.delegate = self;
     [self.customSpeedField addTarget:self action:@selector(textFieldDidChange:) forControlEvents:UIControlEventEditingChanged];
 
     // Play Route Button
@@ -58,7 +60,8 @@
     [self.playRouteButton setTitle:@"  Start Simulation" forState:UIControlStateNormal];
     [self.playRouteButton setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
     self.playRouteButton.titleLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightBold];
-    UIImage *playIcon = [UIImage systemImageNamed:@"play.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:16.0 weight:UIFontWeightBold]];
+    UIImage *playIcon = [MapPickerViewController systemImageNamedWithFallback:@"play.fill"
+                                                                configuration:[UIImageSymbolConfiguration configurationWithPointSize:16.0 weight:UIFontWeightBold]];
     [self.playRouteButton setImage:playIcon forState:UIControlStateNormal];
     self.playRouteButton.tintColor = UIColor.whiteColor;
     self.playRouteButton.backgroundColor = UIColor.systemGreenColor;
@@ -72,7 +75,8 @@
     [self.pauseRouteButton setTitle:@"  Pause" forState:UIControlStateNormal];
     [self.pauseRouteButton setTitleColor:UIColor.labelColor forState:UIControlStateNormal];
     self.pauseRouteButton.titleLabel.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightSemibold];
-    UIImage *pauseIcon = [UIImage systemImageNamed:@"pause.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:15.0 weight:UIFontWeightSemibold]];
+    UIImage *pauseIcon = [MapPickerViewController systemImageNamedWithFallback:@"pause.fill"
+                                                                 configuration:[UIImageSymbolConfiguration configurationWithPointSize:15.0 weight:UIFontWeightSemibold]];
     [self.pauseRouteButton setImage:pauseIcon forState:UIControlStateNormal];
     self.pauseRouteButton.tintColor = UIColor.labelColor;
     self.pauseRouteButton.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
@@ -88,7 +92,8 @@
     [self.stopRouteButton setTitle:@"  Stop Route" forState:UIControlStateNormal];
     [self.stopRouteButton setTitleColor:UIColor.systemRedColor forState:UIControlStateNormal];
     self.stopRouteButton.titleLabel.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightSemibold];
-    UIImage *stopIcon = [UIImage systemImageNamed:@"stop.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:15.0 weight:UIFontWeightSemibold]];
+    UIImage *stopIcon = [MapPickerViewController systemImageNamedWithFallback:@"stop.fill"
+                                                                configuration:[UIImageSymbolConfiguration configurationWithPointSize:15.0 weight:UIFontWeightSemibold]];
     [self.stopRouteButton setImage:stopIcon forState:UIControlStateNormal];
     self.stopRouteButton.tintColor = UIColor.systemRedColor;
     self.stopRouteButton.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.12];
@@ -97,6 +102,206 @@
     self.stopRouteButton.layer.borderWidth = 1.0;
     self.stopRouteButton.layer.borderColor = [UIColor.systemRedColor colorWithAlphaComponent:0.4].CGColor;
     [self.stopRouteButton addTarget:self action:@selector(handleStopRouteTapped) forControlEvents:UIControlEventTouchUpInside];
+
+    // Build Retained Route Static Cells
+    // Start cell
+    self.routeStartCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
+    self.routeStartCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.routeStartCell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    UIView *startBadge = [MapPickerViewController iconBadgeWithSymbolName:@"flag.fill" backgroundColor:UIColor.systemGreenColor];
+    [self.routeStartCell.contentView addSubview:startBadge];
+
+    UILabel *startTitle = [[UILabel alloc] init];
+    startTitle.translatesAutoresizingMaskIntoConstraints = NO;
+    startTitle.text = @"Start Point";
+    startTitle.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightSemibold];
+    startTitle.textColor = UIColor.labelColor;
+    [self.routeStartCell.contentView addSubview:startTitle];
+
+    self.routeStartSubLabel = [[UILabel alloc] init];
+    self.routeStartSubLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.routeStartSubLabel.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
+    self.routeStartSubLabel.textColor = UIColor.secondaryLabelColor;
+    self.routeStartSubLabel.text = @"Tap map to set start position";
+    [self.routeStartCell.contentView addSubview:self.routeStartSubLabel];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [startBadge.leadingAnchor constraintEqualToAnchor:self.routeStartCell.contentView.leadingAnchor constant:16.0],
+        [startBadge.centerYAnchor constraintEqualToAnchor:self.routeStartCell.contentView.centerYAnchor],
+
+        [startTitle.leadingAnchor constraintEqualToAnchor:startBadge.trailingAnchor constant:12.0],
+        [startTitle.topAnchor constraintEqualToAnchor:self.routeStartCell.contentView.topAnchor constant:10.0],
+
+        [self.routeStartSubLabel.leadingAnchor constraintEqualToAnchor:startTitle.leadingAnchor],
+        [self.routeStartSubLabel.topAnchor constraintEqualToAnchor:startTitle.bottomAnchor constant:3.0],
+        [self.routeStartSubLabel.bottomAnchor constraintEqualToAnchor:self.routeStartCell.contentView.bottomAnchor constant:-10.0],
+        [self.routeStartSubLabel.trailingAnchor constraintEqualToAnchor:self.routeStartCell.contentView.trailingAnchor constant:-16.0]
+    ]];
+
+    // Dest cell
+    self.routeDestCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
+    self.routeDestCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.routeDestCell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    UIView *destBadge = [MapPickerViewController iconBadgeWithSymbolName:@"flag.checkered" backgroundColor:UIColor.systemRedColor];
+    [self.routeDestCell.contentView addSubview:destBadge];
+
+    UILabel *destTitle = [[UILabel alloc] init];
+    destTitle.translatesAutoresizingMaskIntoConstraints = NO;
+    destTitle.text = @"Destination";
+    destTitle.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightSemibold];
+    destTitle.textColor = UIColor.labelColor;
+    [self.routeDestCell.contentView addSubview:destTitle];
+
+    self.routeDestSubLabel = [[UILabel alloc] init];
+    self.routeDestSubLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.routeDestSubLabel.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
+    self.routeDestSubLabel.textColor = UIColor.secondaryLabelColor;
+    self.routeDestSubLabel.text = @"Tap map to set destination";
+    [self.routeDestCell.contentView addSubview:self.routeDestSubLabel];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [destBadge.leadingAnchor constraintEqualToAnchor:self.routeDestCell.contentView.leadingAnchor constant:16.0],
+        [destBadge.centerYAnchor constraintEqualToAnchor:self.routeDestCell.contentView.centerYAnchor],
+
+        [destTitle.leadingAnchor constraintEqualToAnchor:destBadge.trailingAnchor constant:12.0],
+        [destTitle.topAnchor constraintEqualToAnchor:self.routeDestCell.contentView.topAnchor constant:10.0],
+
+        [self.routeDestSubLabel.leadingAnchor constraintEqualToAnchor:destTitle.leadingAnchor],
+        [self.routeDestSubLabel.topAnchor constraintEqualToAnchor:destTitle.bottomAnchor constant:3.0],
+        [self.routeDestSubLabel.bottomAnchor constraintEqualToAnchor:self.routeDestCell.contentView.bottomAnchor constant:-10.0],
+        [self.routeDestSubLabel.trailingAnchor constraintEqualToAnchor:self.routeDestCell.contentView.trailingAnchor constant:-16.0]
+    ]];
+
+    // Get directions cell
+    self.routeGetDirectionsCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    self.routeGetDirectionsCell.backgroundColor = UIColor.clearColor;
+    self.routeGetDirectionsCell.backgroundConfiguration = [UIBackgroundConfiguration clearConfiguration];
+    self.routeGetDirectionsCell.selectionStyle = UITableViewCellSelectionStyleNone;
+    self.routeGetDirectionsCell.separatorInset = UIEdgeInsetsMake(0, 10000, 0, 0);
+
+    [self.routeGetDirectionsCell.contentView addSubview:self.getRouteButton];
+    [NSLayoutConstraint activateConstraints:@[
+        [self.getRouteButton.leadingAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.leadingAnchor],
+        [self.getRouteButton.trailingAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.trailingAnchor],
+        [self.getRouteButton.topAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.topAnchor constant:4.0],
+        [self.getRouteButton.bottomAnchor constraintEqualToAnchor:self.routeGetDirectionsCell.contentView.bottomAnchor constant:-4.0],
+        [self.getRouteButton.heightAnchor constraintEqualToConstant:48.0]
+    ]];
+
+    // Transport mode cell
+    self.routeTransportCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    self.routeTransportCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.routeTransportCell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    [self.routeTransportCell.contentView addSubview:self.transportModeSegment];
+    [NSLayoutConstraint activateConstraints:@[
+        [self.transportModeSegment.leadingAnchor constraintEqualToAnchor:self.routeTransportCell.contentView.leadingAnchor constant:16.0],
+        [self.transportModeSegment.trailingAnchor constraintEqualToAnchor:self.routeTransportCell.contentView.trailingAnchor constant:-16.0],
+        [self.transportModeSegment.topAnchor constraintEqualToAnchor:self.routeTransportCell.contentView.topAnchor constant:8.0],
+        [self.transportModeSegment.bottomAnchor constraintEqualToAnchor:self.routeTransportCell.contentView.bottomAnchor constant:-8.0],
+        [self.transportModeSegment.heightAnchor constraintEqualToConstant:32.0]
+    ]];
+
+    // Custom speed cell
+    self.routeCustomSpeedCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    self.routeCustomSpeedCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.routeCustomSpeedCell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    UIView *spdBadge = [MapPickerViewController iconBadgeWithSymbolName:@"speedometer" backgroundColor:UIColor.systemOrangeColor];
+    [self.routeCustomSpeedCell.contentView addSubview:spdBadge];
+
+    UILabel *spdLbl = [[UILabel alloc] init];
+    spdLbl.translatesAutoresizingMaskIntoConstraints = NO;
+    spdLbl.text = @"Speed";
+    spdLbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
+    spdLbl.textColor = UIColor.labelColor;
+    [self.routeCustomSpeedCell.contentView addSubview:spdLbl];
+
+    [self.routeCustomSpeedCell.contentView addSubview:self.customSpeedField];
+    [NSLayoutConstraint activateConstraints:@[
+        [spdBadge.leadingAnchor constraintEqualToAnchor:self.routeCustomSpeedCell.contentView.leadingAnchor constant:16.0],
+        [spdBadge.centerYAnchor constraintEqualToAnchor:self.routeCustomSpeedCell.contentView.centerYAnchor],
+
+        [spdLbl.leadingAnchor constraintEqualToAnchor:spdBadge.trailingAnchor constant:12.0],
+        [spdLbl.centerYAnchor constraintEqualToAnchor:self.routeCustomSpeedCell.contentView.centerYAnchor],
+        [spdLbl.widthAnchor constraintEqualToConstant:90.0],
+
+        [self.customSpeedField.leadingAnchor constraintEqualToAnchor:spdLbl.trailingAnchor constant:8.0],
+        [self.customSpeedField.trailingAnchor constraintEqualToAnchor:self.routeCustomSpeedCell.contentView.trailingAnchor constant:-16.0],
+        [self.customSpeedField.centerYAnchor constraintEqualToAnchor:self.routeCustomSpeedCell.contentView.centerYAnchor],
+        [self.customSpeedField.topAnchor constraintEqualToAnchor:self.routeCustomSpeedCell.contentView.topAnchor constant:6.0],
+        [self.customSpeedField.bottomAnchor constraintEqualToAnchor:self.routeCustomSpeedCell.contentView.bottomAnchor constant:-6.0],
+        [self.customSpeedField.heightAnchor constraintGreaterThanOrEqualToConstant:36.0]
+    ]];
+
+    // Playback cell
+    self.routePlaybackCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    self.routePlaybackCell.backgroundColor = UIColor.clearColor;
+    self.routePlaybackCell.backgroundConfiguration = [UIBackgroundConfiguration clearConfiguration];
+    self.routePlaybackCell.selectionStyle = UITableViewCellSelectionStyleNone;
+    self.routePlaybackCell.separatorInset = UIEdgeInsetsMake(0, 10000, 0, 0);
+
+    // Cancel cell
+    self.routeCancelCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    self.routeCancelCell.backgroundColor = UIColor.clearColor;
+    self.routeCancelCell.backgroundConfiguration = [UIBackgroundConfiguration clearConfiguration];
+    self.routeCancelCell.selectionStyle = UITableViewCellSelectionStyleNone;
+    self.routeCancelCell.separatorInset = UIEdgeInsetsMake(0, 10000, 0, 0);
+
+    [self ls_updateRoutePlaybackCell];
+}
+
+- (void)ls_updateRoutePlaybackCell {
+    for (UIView *v in self.routePlaybackCell.contentView.subviews) {
+        [v removeFromSuperview];
+    }
+
+    LSRouteSimulator *simulator = [LSRouteSimulator shared];
+    if (!simulator.isSimulating) {
+        [self.routePlaybackCell.contentView addSubview:self.playRouteButton];
+        [NSLayoutConstraint activateConstraints:@[
+            [self.playRouteButton.leadingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.leadingAnchor],
+            [self.playRouteButton.trailingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.trailingAnchor],
+            [self.playRouteButton.topAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.topAnchor constant:4.0],
+            [self.playRouteButton.bottomAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.bottomAnchor constant:-4.0],
+            [self.playRouteButton.heightAnchor constraintEqualToConstant:48.0]
+        ]];
+    } else {
+        UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[self.pauseRouteButton, self.stopRouteButton]];
+        stack.translatesAutoresizingMaskIntoConstraints = NO;
+        stack.axis = UILayoutConstraintAxisHorizontal;
+        stack.spacing = 12.0;
+        stack.distribution = UIStackViewDistributionFillEqually;
+        [self.routePlaybackCell.contentView addSubview:stack];
+
+        [NSLayoutConstraint activateConstraints:@[
+            [stack.leadingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.leadingAnchor],
+            [stack.trailingAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.trailingAnchor],
+            [stack.topAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.topAnchor constant:4.0],
+            [stack.bottomAnchor constraintEqualToAnchor:self.routePlaybackCell.contentView.bottomAnchor constant:-4.0],
+            [stack.heightAnchor constraintEqualToConstant:48.0]
+        ]];
+    }
+}
+
+- (void)ls_updateRouteWaypointLabels {
+    if (self.startAnnotation && CLLocationCoordinate2DIsValid(self.startAnnotation.coordinate)) {
+        self.routeStartSubLabel.text = [NSString stringWithFormat:@"%.6f, %.6f",
+                                        self.startAnnotation.coordinate.latitude,
+                                        self.startAnnotation.coordinate.longitude];
+    } else {
+        self.routeStartSubLabel.text = @"Tap map to set start position";
+    }
+
+    if (self.destinationAnnotation && CLLocationCoordinate2DIsValid(self.destinationAnnotation.coordinate)) {
+        self.routeDestSubLabel.text = [NSString stringWithFormat:@"%.6f, %.6f",
+                                       self.destinationAnnotation.coordinate.latitude,
+                                       self.destinationAnnotation.coordinate.longitude];
+    } else {
+        self.routeDestSubLabel.text = @"Tap map to set destination";
+    }
 }
 
 - (void)updateCoordinateModeVisibility {
@@ -120,6 +325,8 @@
         }
     }
 
+    [self ls_updateRouteWaypointLabels];
+    [self ls_updateRoutePlaybackCell];
     [self refreshStatusPill];
     [self.tableView reloadData];
 }
@@ -167,6 +374,8 @@
         self.routePolyline = nil;
     }
 
+    [self ls_updateRouteWaypointLabels];
+    [self ls_updateRoutePlaybackCell];
     [self.tableView reloadData];
 }
 
@@ -230,6 +439,8 @@
             strongSelf.routePolyline = strongSelf.fetchedRoute.polyline;
             [strongSelf.mapView addOverlay:strongSelf.routePolyline];
             [strongSelf.mapView setVisibleMapRect:strongSelf.routePolyline.boundingMapRect edgePadding:UIEdgeInsetsMake(48, 48, 48, 48) animated:YES];
+            [strongSelf ls_updateRouteWaypointLabels];
+            [strongSelf ls_updateRoutePlaybackCell];
             [strongSelf.tableView reloadData];
             [strongSelf refreshStatusPill];
         });
@@ -276,6 +487,7 @@
     [PersistenceManager shared].simulationWasActive = YES;
 
     [simulator startWithRoute:self.fetchedRoute];
+    [self ls_updateRoutePlaybackCell];
     [self refreshStatusPill];
     [self.tableView reloadData];
 }
@@ -304,6 +516,7 @@
     [simulator stop];
     [PersistenceManager shared].simulationWasActive = NO;
     [self playSimulationStopHaptic];
+    [self ls_updateRoutePlaybackCell];
     [self refreshStatusPill];
     [self.tableView reloadData];
 }
@@ -344,6 +557,7 @@
 
     NSUInteger count = points.count;
     CLLocationCoordinate2D *coords = malloc(sizeof(CLLocationCoordinate2D) * count);
+    if (!coords) return;
     for (NSUInteger i = 0; i < count; i++) {
         coords[i] = points[i].coordinate;
     }
@@ -373,6 +587,8 @@
         case LSTransportModeCustom: self.transportModeSegment.selectedSegmentIndex = 3; break;
     }
 
+    [self ls_updateRouteWaypointLabels];
+    [self ls_updateRoutePlaybackCell];
     [self refreshStatusPill];
     [self.tableView reloadData];
 }
@@ -381,10 +597,6 @@
 
 - (NSInteger)ls_routeNumberOfSections {
     BOOL hasRouteOrSim = self.fetchedRoute != nil || [[LSRouteSimulator shared] isSimulating];
-    // Section 0: Route Waypoints (Start, Dest, Get Route)
-    // Section 1 (if route): Speed & Transport Mode
-    // Section 2 (if route): Simulation Controls
-    // Section 3: Cancel Action
     return hasRouteOrSim ? 4 : 2;
 }
 
@@ -397,13 +609,13 @@
 
     if (hasRouteOrSim) {
         if (section == 1) {
-            return (self.transportModeSegment.selectedSegmentIndex == 3) ? 2 : 1; // Transport segment, (Custom speed)
+            return (self.transportModeSegment.selectedSegmentIndex == 3) ? 2 : 1;
         }
         if (section == 2) {
-            return 1; // Play or Pause/Stop row
+            return 1;
         }
         if (section == 3) {
-            return 1; // Cancel button
+            return 1;
         }
     } else {
         if (section == 1) {
@@ -428,193 +640,28 @@
     BOOL hasRouteOrSim = self.fetchedRoute != nil || [[LSRouteSimulator shared] isSimulating];
 
     if (indexPath.section == 0) {
-        if (indexPath.row == 0 || indexPath.row == 1) {
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-            BOOL isStart = (indexPath.row == 0);
-            UIView *badge = isStart ?
-                [MapPickerViewController iconBadgeWithSymbolName:@"flag.fill" backgroundColor:UIColor.systemGreenColor] :
-                [MapPickerViewController iconBadgeWithSymbolName:@"flag.checkered" backgroundColor:UIColor.systemRedColor];
-            badge.translatesAutoresizingMaskIntoConstraints = NO;
-            [cell.contentView addSubview:badge];
-
-            UILabel *lbl = [[UILabel alloc] init];
-            lbl.translatesAutoresizingMaskIntoConstraints = NO;
-            lbl.text = isStart ? @"Start Point" : @"Destination";
-            lbl.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightSemibold];
-            lbl.textColor = UIColor.labelColor;
-            [cell.contentView addSubview:lbl];
-
-            UILabel *sub = [[UILabel alloc] init];
-            sub.translatesAutoresizingMaskIntoConstraints = NO;
-            sub.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
-            sub.textColor = UIColor.secondaryLabelColor;
-
-            CLLocationCoordinate2D coord = isStart ?
-                (self.startAnnotation ? self.startAnnotation.coordinate : kCLLocationCoordinate2DInvalid) :
-                (self.destinationAnnotation ? self.destinationAnnotation.coordinate : kCLLocationCoordinate2DInvalid);
-
-            if (CLLocationCoordinate2DIsValid(coord)) {
-                sub.text = [NSString stringWithFormat:@"%.5f, %.5f", coord.latitude, coord.longitude];
-            } else {
-                sub.text = isStart ? @"Tap map to set start position" : @"Tap map to set destination";
-            }
-            [cell.contentView addSubview:sub];
-
-            [NSLayoutConstraint activateConstraints:@[
-                [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-
-                [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
-                [lbl.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:10.0],
-
-                [sub.leadingAnchor constraintEqualToAnchor:lbl.leadingAnchor],
-                [sub.topAnchor constraintEqualToAnchor:lbl.bottomAnchor constant:3.0],
-                [sub.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-10.0],
-                [sub.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0]
-            ]];
-            return cell;
-        } else {
-            // Get Route button cell
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.clearColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-            [self.getRouteButton removeFromSuperview];
-            [cell.contentView addSubview:self.getRouteButton];
-            [NSLayoutConstraint activateConstraints:@[
-                [self.getRouteButton.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor],
-                [self.getRouteButton.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor],
-                [self.getRouteButton.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:4.0],
-                [self.getRouteButton.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-4.0],
-                [self.getRouteButton.heightAnchor constraintEqualToConstant:48.0]
-            ]];
-            return cell;
-        }
+        if (indexPath.row == 0) return self.routeStartCell;
+        if (indexPath.row == 1) return self.routeDestCell;
+        return self.routeGetDirectionsCell;
     }
 
     if (hasRouteOrSim) {
         if (indexPath.section == 1) {
-            if (indexPath.row == 0) {
-                UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-                cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-                cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-                [self.transportModeSegment removeFromSuperview];
-                [cell.contentView addSubview:self.transportModeSegment];
-                [NSLayoutConstraint activateConstraints:@[
-                    [self.transportModeSegment.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                    [self.transportModeSegment.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-                    [self.transportModeSegment.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:8.0],
-                    [self.transportModeSegment.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-8.0],
-                    [self.transportModeSegment.heightAnchor constraintEqualToConstant:32.0]
-                ]];
-                return cell;
-            } else {
-                // Custom speed row
-                UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-                cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-                cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-                UIView *badge = [MapPickerViewController iconBadgeWithSymbolName:@"speedometer" backgroundColor:UIColor.systemOrangeColor];
-                badge.translatesAutoresizingMaskIntoConstraints = NO;
-                [cell.contentView addSubview:badge];
-
-                UILabel *lbl = [[UILabel alloc] init];
-                lbl.translatesAutoresizingMaskIntoConstraints = NO;
-                lbl.text = @"Speed (km/h)";
-                lbl.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
-                lbl.textColor = UIColor.labelColor;
-                [cell.contentView addSubview:lbl];
-
-                [self.customSpeedField removeFromSuperview];
-                [cell.contentView addSubview:self.customSpeedField];
-
-                [NSLayoutConstraint activateConstraints:@[
-                    [badge.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16.0],
-                    [badge.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-
-                    [lbl.leadingAnchor constraintEqualToAnchor:badge.trailingAnchor constant:12.0],
-                    [lbl.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-
-                    [self.customSpeedField.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16.0],
-                    [self.customSpeedField.leadingAnchor constraintEqualToAnchor:lbl.trailingAnchor constant:8.0],
-                    [self.customSpeedField.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
-                    [cell.contentView.heightAnchor constraintGreaterThanOrEqualToConstant:46.0]
-                ]];
-                return cell;
-            }
+            if (indexPath.row == 0) return self.routeTransportCell;
+            return self.routeCustomSpeedCell;
         }
 
         if (indexPath.section == 2) {
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.clearColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-            LSRouteSimulator *simulator = [LSRouteSimulator shared];
-            if (!simulator.isSimulating) {
-                [self.playRouteButton removeFromSuperview];
-                [cell.contentView addSubview:self.playRouteButton];
-                [NSLayoutConstraint activateConstraints:@[
-                    [self.playRouteButton.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor],
-                    [self.playRouteButton.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor],
-                    [self.playRouteButton.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:4.0],
-                    [self.playRouteButton.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-4.0],
-                    [self.playRouteButton.heightAnchor constraintEqualToConstant:48.0]
-                ]];
-            } else {
-                UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[self.pauseRouteButton, self.stopRouteButton]];
-                stack.translatesAutoresizingMaskIntoConstraints = NO;
-                stack.axis = UILayoutConstraintAxisHorizontal;
-                stack.spacing = 12.0;
-                stack.distribution = UIStackViewDistributionFillEqually;
-                [cell.contentView addSubview:stack];
-
-                [NSLayoutConstraint activateConstraints:@[
-                    [stack.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor],
-                    [stack.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor],
-                    [stack.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:4.0],
-                    [stack.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-4.0],
-                    [stack.heightAnchor constraintEqualToConstant:48.0]
-                ]];
-            }
-            return cell;
+            [self ls_updateRoutePlaybackCell];
+            return self.routePlaybackCell;
         }
 
         if (indexPath.section == 3) {
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.clearColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-            [self.cancelButton removeFromSuperview];
-            [cell.contentView addSubview:self.cancelButton];
-            [NSLayoutConstraint activateConstraints:@[
-                [self.cancelButton.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor],
-                [self.cancelButton.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor],
-                [self.cancelButton.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:4.0],
-                [self.cancelButton.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-4.0],
-                [self.cancelButton.heightAnchor constraintEqualToConstant:48.0]
-            ]];
-            return cell;
+            return self.cancelButtonCell;
         }
     } else {
         if (indexPath.section == 1) {
-            UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-            cell.backgroundColor = UIColor.clearColor;
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
-            [self.cancelButton removeFromSuperview];
-            [cell.contentView addSubview:self.cancelButton];
-            [NSLayoutConstraint activateConstraints:@[
-                [self.cancelButton.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor],
-                [self.cancelButton.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor],
-                [self.cancelButton.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:4.0],
-                [self.cancelButton.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-4.0],
-                [self.cancelButton.heightAnchor constraintEqualToConstant:48.0]
-            ]];
-            return cell;
+            return self.cancelButtonCell;
         }
     }
 
@@ -640,6 +687,7 @@
     self.latitudeField.text = [NSString stringWithFormat:@"%.6f", coordinate.latitude];
     self.longitudeField.text = [NSString stringWithFormat:@"%.6f", coordinate.longitude];
     self.suppressFieldSync = NO;
+    [self ls_updateRouteWaypointLabels];
 }
 
 - (void)routeSimulatorDidFinish:(LSRouteSimulator *)simulator {
@@ -662,6 +710,7 @@
     }
 
     self.statusLabel.text = @"Route complete";
+    [self ls_updateRoutePlaybackCell];
     [self refreshStatusPill];
     [self.tableView reloadData];
 }
@@ -686,6 +735,7 @@
             view = [[MKMarkerAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:identifier];
             view.canShowCallout = YES;
             view.draggable = YES;
+            view.glyphImage = [MapPickerViewController systemImageNamedWithFallback:@"flag.fill" configuration:nil];
         } else {
             view.annotation = annotation;
         }
@@ -700,6 +750,7 @@
             view = [[MKMarkerAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:identifier];
             view.canShowCallout = YES;
             view.draggable = YES;
+            view.glyphImage = [MapPickerViewController systemImageNamedWithFallback:@"flag.checkered" configuration:nil];
         } else {
             view.annotation = annotation;
         }
@@ -717,6 +768,8 @@
             [self.mapView removeOverlay:self.routePolyline];
             self.routePolyline = nil;
         }
+        [self ls_updateRouteWaypointLabels];
+        [self ls_updateRoutePlaybackCell];
         [self.tableView reloadData];
     }
 }

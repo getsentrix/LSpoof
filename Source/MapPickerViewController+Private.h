@@ -26,7 +26,7 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @interface LSDestinationAnnotation : MKPointAnnotation
 @end
 
-@interface MapPickerViewController ()
+@interface MapPickerViewController () <UIGestureRecognizerDelegate>
 
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) UIView *tableHeaderContainer;
@@ -34,6 +34,7 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UILabel *titleLabel;
 @property (nonatomic, strong) UILabel *subtitleLabel;
 @property (nonatomic, strong) UIView *statusPill;
+@property (nonatomic, strong) UIStackView *statusStackView;
 @property (nonatomic, strong) UIView *statusDot;
 @property (nonatomic, strong) UILabel *statusLabel;
 @property (nonatomic, strong) UIButton *closeButton;
@@ -45,6 +46,10 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UIView *suggestionsPanel;
 @property (nonatomic, strong) UITableView *suggestionsTableView;
 @property (nonatomic, strong) NSLayoutConstraint *suggestionsHeightConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *searchBarHeightConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *searchBarBottomConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *coordinateModeHeightConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *coordinateModeBottomConstraint;
 @property (nonatomic, assign) BOOL searchSuggestionsVisible;
 @property (nonatomic, strong) UIView *mapContainer;
 @property (nonatomic, strong) MKMapView *mapView;
@@ -52,6 +57,8 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UIActivityIndicatorView *mapSpinner;
 @property (nonatomic, strong) UISegmentedControl *panelTabSegment;
 @property (nonatomic, strong) UISegmentedControl *coordinateModeSegment;
+@property (nonatomic, strong) UITapGestureRecognizer *mapTapGesture;
+@property (nonatomic, strong) UILongPressGestureRecognizer *mapLongPressGesture;
 
 @property (nonatomic, strong) UIButton *bookmarkSaveButton;
 
@@ -70,6 +77,32 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UIButton *applyButton;
 @property (nonatomic, strong) UIButton *cancelButton;
 @property (nonatomic, strong) UIButton *stopButton;
+
+// Retained static cells for Static Mode
+@property (nonatomic, strong) UITableViewCell *previewCell;
+@property (nonatomic, strong) UILabel *previewCoordLabel;
+@property (nonatomic, strong) UITableViewCell *latitudeCell;
+@property (nonatomic, strong) UITableViewCell *longitudeCell;
+@property (nonatomic, strong) UITableViewCell *altitudeCell;
+@property (nonatomic, strong) UITableViewCell *headingCell;
+@property (nonatomic, strong) UITableViewCell *fluctuationCell;
+@property (nonatomic, strong) UITableViewCell *fluctuationRadiusCell;
+@property (nonatomic, strong) UITableViewCell *keepLastSpoofCell;
+@property (nonatomic, strong) UITableViewCell *showRealLocationCell;
+@property (nonatomic, strong) UITableViewCell *applyButtonCell;
+@property (nonatomic, strong) UITableViewCell *stopButtonCell;
+@property (nonatomic, strong) UITableViewCell *cancelButtonCell;
+
+// Retained static cells for Route Mode
+@property (nonatomic, strong) UITableViewCell *routeStartCell;
+@property (nonatomic, strong) UILabel *routeStartSubLabel;
+@property (nonatomic, strong) UITableViewCell *routeDestCell;
+@property (nonatomic, strong) UILabel *routeDestSubLabel;
+@property (nonatomic, strong) UITableViewCell *routeGetDirectionsCell;
+@property (nonatomic, strong) UITableViewCell *routeTransportCell;
+@property (nonatomic, strong) UITableViewCell *routeCustomSpeedCell;
+@property (nonatomic, strong) UITableViewCell *routePlaybackCell;
+@property (nonatomic, strong) UITableViewCell *routeCancelCell;
 
 @property (nonatomic, strong) MKPointAnnotation *pinAnnotation;
 @property (nonatomic, strong, nullable) LSStartAnnotation *startAnnotation;
@@ -93,6 +126,7 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, assign) LSMapPickerCoordinateMode coordinateMode;
 @property (nonatomic, assign) BOOL bookmarksEditMode;
 
++ (UIImage *)systemImageNamedWithFallback:(NSString *)name configuration:(nullable UIImageConfiguration *)config;
 + (UIView *)iconBadgeWithSymbolName:(NSString *)symbolName backgroundColor:(UIColor *)bgColor;
 - (void)refreshStatusPill;
 - (void)syncFieldsFromCoordinate;
@@ -110,12 +144,14 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 - (void)playBookmarkSavedHaptic;
 - (void)playSimulationStopHaptic;
 - (void)dismissKeyboard;
+- (void)toggleSignForActiveField;
 - (void)handleMapTap:(UITapGestureRecognizer *)gesture;
 - (void)handleMapLongPress:(UILongPressGestureRecognizer *)gesture;
 - (void)handleHeadingSliderChanged:(UISlider *)sender;
 - (void)handleApply;
 - (void)handleCancel;
 - (void)handleStopSpoofing;
+- (void)ls_updateTableHeaderLayout;
 
 @end
 
