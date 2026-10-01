@@ -12,13 +12,13 @@
       "developerName": "getsentrix",
       "subtitle": "Universal GPS Spoofer for iOS",
       "version": "1.1.6",
-      "versionDate": "2026-10-01T21:35:00Z",
-      "versionDescription": "LSpoof v1.1.6 - True Native Liquid Glass UI, On-Screen Floating Button, Layout Polish",
+      "versionDate": "2026-10-01T21:36:53Z",
+      "versionDescription": "LSpoof v1.1.6 - Native Liquid Glass UI, On-Screen Floating Button & Layout Polish",
       "downloadURL": "https://github.com/getsentrix/LSpoof/releases/download/v1.1.6/LocationSpoofer.dylib",
       "localizedDescription": "Universal GPS, altitude, and heading spoofer for sideloaded iOS apps. Features draggable pins, real-time route simulation along Apple Maps road networks, randomized GPS drift fluctuation, and a native iOS 16+ Inset Grouped interface.",
       "iconURL": "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png",
       "tintColor": "007AFF",
-      "size": 492640,
+      "size": 517288,
       "screenshotURLs": [
         "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/preview-static.png"
       ]
@@ -28,8 +28,8 @@
     {
       "title": "LSpoof v1.1.6 Released",
       "identifier": "lspoof-release-1.1.6",
-      "caption": "True Native Liquid Glass UI, Floating Button & Layout Polish",
-      "date": "2026-10-01T21:35:00Z",
+      "caption": "Modern Inset Grouped UI, Apple SF Symbols & Stability Polish",
+      "date": "2026-10-01T21:36:53Z",
       "tintColor": "007AFF",
       "imageURL": "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png",
       "url": "https://github.com/getsentrix/LSpoof/releases/tag/v1.1.6"
