@@ -1,5 +1,5 @@
 # LSpoof
-
+**Forked and maintained by getsentrix.**
 Override your iOS device's GPS location from inside any app — no jailbreak required.
 
 Drop this dylib into a sideloaded IPA, and the app will report whatever coordinates you choose instead of your real location. Safari, Maps, Uber, Lyft, Pokemon GO — wherever the host app reads `CLLocation`, the spoofed value comes through.
