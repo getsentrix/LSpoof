@@ -66,19 +66,17 @@ jobs:
             if [[ "${{ github.ref }}" == refs/tags/* ]]; then
               TAG="${GITHUB_REF#refs/tags/}"
             else
-              TAG="v1.1.6"
+              TAG="v1.1.7"
             fi
           fi
           echo "Using tag: $TAG"
           cat << 'EOF' > notes.md
-          ## LSpoof v1.1.6 - Native Liquid Glass UI, On-Screen Floating Button & Layout Polish
+          ## LSpoof v1.1.7 - Integrated Top Bar Menu Button & Touch Fix
 
           ### What's New
-          - **True Native Liquid Glass**: Full-screen `SystemUltraThinMaterial` blur backdrop with translucent card cells and subtle continuous borders.
-          - **On-Screen Floating Menu Button**: Added a circular floating button next to the settings gear for instant one-tap access without gesture conflicts. Draggable with position persistence and toggleable in options.
-          - **Title & Header Padding**: Added 24pt top breathing room so the sheet grabber never crowds the Location Spoofer title.
-          - **Segmented Control & Switch Polish**: Fixed segmented control truncation ("Saved") and eliminated right-edge switch clipping with native cell accessory views.
-          - **Simplified Copy**: Clean human descriptions for compass heading and bearing without wordy jargon.
+          - **Integrated Top Bar Menu Button**: Replaced floating window overlay with a native button built directly into the app's top bar right next to the Circle Name pill. Looks and feels like a built-in feature of the app.
+          - **Full Touch Responsiveness**: Completely eliminated the secondary UIWindow overlay that was intercepting touches and causing touches to pass through to the background app. All menu buttons, table cells, text fields, and map pins respond instantly.
+          - **Enhanced Sheet Backdrop**: Applied non-clear liquid glass material backdrop to ensure sheets capture 100% of gestures while retaining the native Apple blur aesthetic.
 
           ### Assets
           - `LocationSpoofer.dylib`: Sideloadable arm64 Mach-O dynamic library for iOS 14.0+

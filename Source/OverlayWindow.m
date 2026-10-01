@@ -24,41 +24,12 @@ static os_log_t ls_overlayLog = NULL;
 #define LSAssertMainThread()
 #endif
 
-@class LSFloatingOverlayWindow;
-
 @interface LSOverlayManager ()
 + (instancetype)shared;
 @property (nonatomic, assign) BOOL installed;
-@property (nonatomic, strong, nullable) LSFloatingOverlayWindow *floatingWindow;
-@property (nonatomic, strong, nullable) UIButton *floatingButton;
-- (void)setupFloatingButtonIfNeeded;
-@end
-
-@interface LSFloatingOverlayWindow : UIWindow
-@property (nonatomic, weak, nullable) UIButton *floatingButton;
-@end
-
-@implementation LSFloatingOverlayWindow
-
-- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
-    UIView *hitView = [super hitTest:point withEvent:event];
-    if (hitView == self.floatingButton || [hitView isDescendantOfView:self.floatingButton]) {
-        return hitView;
-    }
-    return nil;
-}
-
-@end
-
-@interface LSFloatingRootViewController : UIViewController
-@end
-
-@implementation LSFloatingRootViewController
-
-- (BOOL)prefersStatusBarHidden {
-    return NO;
-}
-
+@property (nonatomic, strong, nullable) UIButton *topBarButton;
+@property (nonatomic, strong, nullable) NSTimer *topBarAttachTimer;
+- (void)setupTopBarButtonIfNeeded;
 @end
 
 static void LSUpdateThreeFingerHoldForEvent(UIEvent *event);
@@ -180,6 +151,7 @@ static void LSUpdateThreeFingerHoldForEvent(UIEvent *event) {
                                                            block:^(__unused NSTimer *timer) {
             LSHandleThreeFingerHoldTimerFired();
         }];
+
         [[NSRunLoop mainRunLoop] addTimer:ls_threeFingerHoldTimer forMode:NSRunLoopCommonModes];
     } else {
         ls_threeFingerTriggered = NO;
@@ -203,19 +175,25 @@ static UIViewController *LSHostTopViewController(void) {
                 break;
             }
         }
+        if (keyWindow) break;
+    }
 
-        if (!keyWindow) {
+    if (!keyWindow) {
+        for (UIScene *scene in application.connectedScenes) {
+            if (![scene isKindOfClass:[UIWindowScene class]]) continue;
+            UIWindowScene *windowScene = (UIWindowScene *)scene;
             for (UIWindow *window in windowScene.windows) {
                 if (!window.hidden && window.alpha > 0.01) {
                     keyWindow = window;
                     break;
                 }
             }
+            if (keyWindow) break;
         }
+    }
 
-        if (keyWindow) {
-            break;
-        }
+    if (!keyWindow) {
+        keyWindow = application.windows.firstObject;
     }
 
     if (!keyWindow) {
@@ -261,8 +239,8 @@ static UIViewController *LSHostTopViewController(void) {
 + (void)setFloatingButtonHidden:(BOOL)hidden {
     dispatch_async(dispatch_get_main_queue(), ^{
         LSOverlayManager *mgr = [self shared];
-        if (mgr.floatingButton) {
-            mgr.floatingButton.hidden = hidden;
+        if (mgr.topBarButton) {
+            mgr.topBarButton.hidden = hidden;
         }
     });
 }
@@ -272,10 +250,13 @@ static UIViewController *LSHostTopViewController(void) {
     ls_mapPickerVisible = visible;
     LSCancelThreeFingerHoldTimer();
     LSOverlayManager *mgr = [self shared];
-    if (mgr.floatingButton && [PersistenceManager shared].floatingButtonEnabled) {
-        [UIView animateWithDuration:0.2 animations:^{
-            mgr.floatingButton.alpha = visible ? 0.0 : 1.0;
-        }];
+    if (mgr.topBarButton) {
+        if (visible) {
+            mgr.topBarButton.hidden = YES;
+        } else {
+            mgr.topBarButton.hidden = ![PersistenceManager shared].floatingButtonEnabled;
+            [mgr setupTopBarButtonIfNeeded];
+        }
     }
 }
 
@@ -291,90 +272,110 @@ static UIViewController *LSHostTopViewController(void) {
     LSSwizzleSendEventOnClass(LSSendEventHookTargetClass(), @selector(lsp_applicationSendEvent:));
 }
 
-- (void)setupFloatingButtonIfNeeded {
-    if (self.floatingWindow && self.floatingButton) {
+- (void)setupTopBarButtonIfNeeded {
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self setupTopBarButtonIfNeeded];
+        });
         return;
     }
 
-    UIApplication *app = UIApplication.sharedApplication;
-    UIWindowScene *activeScene = nil;
-    if (@available(iOS 13.0, *)) {
-        for (UIScene *scene in app.connectedScenes) {
-            if ([scene isKindOfClass:[UIWindowScene class]]) {
-                UIWindowScene *ws = (UIWindowScene *)scene;
-                if (ws.activationState == UISceneActivationStateForegroundActive) {
-                    activeScene = ws;
-                    break;
-                }
-                if (!activeScene) {
-                    activeScene = ws;
+    UIViewController *topVC = LSHostTopViewController();
+    if (!topVC || !topVC.view) {
+        return;
+    }
+
+    // Search topVC.view hierarchy for Life360 header elements (Settings button and Circle Name pill)
+    __block UIView *targetContainer = topVC.view;
+    __block CGRect circleNameFrame = CGRectZero;
+    __block CGRect settingsFrame = CGRectZero;
+    __block UIView *circleNameView = nil;
+
+    void (^searchBlock)(UIView *, void (^)(UIView *, id)) = ^(UIView *root, void (^recurse)(UIView *, id)) {
+        for (UIView *sub in root.subviews) {
+            if (sub.hidden || sub.alpha < 0.05) continue;
+            CGRect f = [sub convertRect:sub.bounds toView:topVC.view];
+            if (f.origin.y >= 20.0 && f.origin.y <= 130.0 && f.size.height >= 30.0 && f.size.height <= 64.0) {
+                if (f.origin.x < 70.0 && f.size.width >= 36.0 && f.size.width <= 64.0) {
+                    settingsFrame = f;
+                } else if (f.origin.x >= 60.0 && f.origin.x <= 280.0 && f.size.width >= 70.0) {
+                    if (f.size.width > circleNameFrame.size.width) {
+                        circleNameFrame = f;
+                        circleNameView = sub;
+                    }
                 }
             }
+            recurse(sub, recurse);
         }
+    };
+    searchBlock(topVC.view, searchBlock);
+
+    CGFloat buttonWidth = 44.0;
+    CGFloat buttonHeight = 44.0;
+    CGFloat buttonY = 56.0;
+    CGFloat buttonX = 245.0;
+
+    if (circleNameView && circleNameFrame.size.width > 0) {
+        targetContainer = circleNameView.superview ?: topVC.view;
+        CGRect inContainer = [circleNameView.superview convertRect:circleNameFrame fromView:topVC.view];
+        // Position right next to circle name with circle name to the left
+        buttonX = CGRectGetMaxX(inContainer) + 8.0;
+        buttonY = inContainer.origin.y + (inContainer.size.height - buttonHeight) / 2.0;
+    } else if (settingsFrame.size.width > 0) {
+        buttonY = settingsFrame.origin.y + (settingsFrame.size.height - buttonHeight) / 2.0;
+        buttonX = CGRectGetMaxX(settingsFrame) + 180.0;
+    } else {
+        CGFloat safeTop = topVC.view.safeAreaInsets.top;
+        if (safeTop <= 0) safeTop = 47.0;
+        buttonY = safeTop + 6.0;
+        buttonX = 245.0;
     }
 
-    LSFloatingOverlayWindow *window = nil;
-    if (@available(iOS 13.0, *)) {
-        if (activeScene) {
-            window = [[LSFloatingOverlayWindow alloc] initWithWindowScene:activeScene];
+    // Clamp buttonX to protect right-side action buttons (mail / chat)
+    CGFloat screenW = topVC.view.bounds.size.width;
+    if (screenW > 0 && (buttonX + buttonWidth) > (screenW - 56.0)) {
+        buttonX = screenW - buttonWidth - 56.0;
+    }
+
+    if (!self.topBarButton) {
+        UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+        button.frame = CGRectMake(buttonX, buttonY, buttonWidth, buttonHeight);
+        button.backgroundColor = UIColor.whiteColor;
+        button.layer.cornerRadius = buttonWidth / 2.0;
+        if (@available(iOS 13.0, *)) {
+            button.layer.cornerCurve = kCACornerCurveContinuous;
         }
-    }
-    if (!window) {
-        window = [[LSFloatingOverlayWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
+        button.layer.shadowColor = UIColor.blackColor.CGColor;
+        button.layer.shadowOffset = CGSizeMake(0.0, 2.0);
+        button.layer.shadowOpacity = 0.14;
+        button.layer.shadowRadius = 4.0;
+        button.layer.masksToBounds = NO;
+
+        UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:18.0 weight:UIFontWeightBold];
+        UIImage *icon = [UIImage systemImageNamed:@"location.fill" withConfiguration:config];
+        if (!icon) icon = [UIImage systemImageNamed:@"mappin.circle.fill" withConfiguration:config];
+        if (!icon) icon = [UIImage systemImageNamed:@"circle.fill" withConfiguration:config];
+        [button setImage:icon forState:UIControlStateNormal];
+        // Life360 purple
+        button.tintColor = [UIColor colorWithRed:0.43 green:0.25 blue:0.85 alpha:1.0];
+
+        [button addTarget:self action:@selector(handleMenuButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+        self.topBarButton = button;
+    } else {
+        self.topBarButton.frame = CGRectMake(buttonX, buttonY, buttonWidth, buttonHeight);
     }
 
-    window.windowLevel = UIWindowLevelAlert + 100.0;
-    window.backgroundColor = UIColor.clearColor;
-    window.rootViewController = [[LSFloatingRootViewController alloc] init];
-    window.hidden = NO;
-
-    // Create circular white floating button with purple location icon matching Life360 UI buttons
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
-    button.frame = CGRectMake(0.0, 0.0, 44.0, 44.0);
-    button.backgroundColor = UIColor.whiteColor;
-    button.layer.cornerRadius = 22.0;
-    if (@available(iOS 13.0, *)) {
-        button.layer.cornerCurve = kCACornerCurveContinuous;
+    if (self.topBarButton.superview != targetContainer) {
+        [self.topBarButton removeFromSuperview];
+        [targetContainer addSubview:self.topBarButton];
     }
-    button.layer.shadowColor = UIColor.blackColor.CGColor;
-    button.layer.shadowOffset = CGSizeMake(0.0, 2.0);
-    button.layer.shadowOpacity = 0.16;
-    button.layer.shadowRadius = 4.0;
-    button.layer.masksToBounds = NO;
-
-    UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:19.0 weight:UIFontWeightBold];
-    UIImage *icon = [UIImage systemImageNamed:@"location.fill" withConfiguration:config];
-    if (!icon) {
-        icon = [UIImage systemImageNamed:@"mappin.circle.fill" withConfiguration:config];
-    }
-    if (!icon) {
-        icon = [UIImage systemImageNamed:@"circle.fill" withConfiguration:config];
-    }
-    [button setImage:icon forState:UIControlStateNormal];
-    // Vibrant purple matching Life360 settings button
-    button.tintColor = [UIColor colorWithRed:0.43 green:0.25 blue:0.85 alpha:1.0];
-
-    [button addTarget:self action:@selector(handleFloatingButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
-    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleFloatingButtonPan:)];
-    [button addGestureRecognizer:pan];
-
-    CGPoint pos = [PersistenceManager shared].floatingButtonPosition;
-    if (pos.x <= 0 || pos.y <= 0) {
-        // Position right next to settings button (Settings is at x≈20, y≈56)
-        pos = CGPointMake(74.0, 56.0);
-    }
-    button.center = pos;
-
-    [window.rootViewController.view addSubview:button];
-    window.floatingButton = button;
-    self.floatingButton = button;
-    self.floatingWindow = window;
+    [targetContainer bringSubviewToFront:self.topBarButton];
 
     BOOL enabled = [PersistenceManager shared].floatingButtonEnabled;
-    self.floatingButton.hidden = !enabled;
+    self.topBarButton.hidden = !enabled || ls_mapPickerVisible;
 }
 
-- (void)handleFloatingButtonTapped:(UIButton *)sender {
+- (void)handleMenuButtonTapped:(UIButton *)sender {
     UIImpactFeedbackGenerator *impact = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
     [impact impactOccurred];
 
@@ -389,28 +390,17 @@ static UIViewController *LSHostTopViewController(void) {
     [LSOverlayManager presentMapPicker];
 }
 
-- (void)handleFloatingButtonPan:(UIPanGestureRecognizer *)gesture {
-    CGPoint translation = [gesture translationInView:self.floatingWindow];
-    CGPoint center = self.floatingButton.center;
-    center.x += translation.x;
-    center.y += translation.y;
-    self.floatingButton.center = center;
-    [gesture setTranslation:CGPointZero inView:self.floatingWindow];
-
-    if (gesture.state == UIGestureRecognizerStateEnded || gesture.state == UIGestureRecognizerStateCancelled) {
-        CGRect bounds = self.floatingWindow.bounds;
-        CGFloat minX = 26.0;
-        CGFloat maxX = bounds.size.width - 26.0;
-        CGFloat minY = 50.0;
-        CGFloat maxY = bounds.size.height - 50.0;
-        CGPoint clamped = self.floatingButton.center;
-        clamped.x = MAX(minX, MIN(maxX, clamped.x));
-        clamped.y = MAX(minY, MIN(maxY, clamped.y));
-        [UIView animateWithDuration:0.25 delay:0 usingSpringWithDamping:0.8 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
-            self.floatingButton.center = clamped;
-        } completion:nil];
-        [PersistenceManager shared].floatingButtonPosition = clamped;
+- (void)startTopBarButtonMonitor {
+    if (self.topBarAttachTimer) {
+        return;
     }
+    self.topBarAttachTimer = [NSTimer scheduledTimerWithTimeInterval:2.5
+                                                             repeats:YES
+                                                               block:^(__unused NSTimer *timer) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[LSOverlayManager shared] setupTopBarButtonIfNeeded];
+        });
+    }];
 }
 
 - (void)installIfNeeded {
@@ -427,10 +417,10 @@ static UIViewController *LSHostTopViewController(void) {
 
     [LSOverlayManager installSendEventHooks];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self setupFloatingButtonIfNeeded];
+        [self setupTopBarButtonIfNeeded];
+        [self startTopBarButtonMonitor];
     });
 
-    // Singleton retains observers for process lifetime.
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(handleApplicationDidFinishLaunching:)
                                                  name:UIApplicationDidFinishLaunchingNotification
@@ -450,13 +440,13 @@ static UIViewController *LSHostTopViewController(void) {
 - (void)handleApplicationDidFinishLaunching:(NSNotification *)notification {
     (void)notification;
     [LSOverlayManager installSendEventHooks];
-    [self setupFloatingButtonIfNeeded];
+    [self setupTopBarButtonIfNeeded];
 }
 
 - (void)handleApplicationDidBecomeActive:(NSNotification *)notification {
     (void)notification;
     [LSOverlayManager installSendEventHooks];
-    [self setupFloatingButtonIfNeeded];
+    [self setupTopBarButtonIfNeeded];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [LSUpdateChecker checkForUpdatesAutomatically];
     });

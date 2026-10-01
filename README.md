@@ -22,13 +22,11 @@
 
 ---
 
-## ⚡ What's New in v1.1.6
+## ⚡ What's New in v1.1.7
 
-- **True Native Liquid Glass UI**: Real `SystemUltraThinMaterial` blur backdrop with translucent card cells and subtle borders.
-- **On-Screen Floating Menu Button**: Circular button right next to the settings gear for instant one-tap access without gesture conflicts. Draggable to any screen edge with saved position.
-- **Header & Title Padding**: Fixed title crowding against sheet grabber handle.
-- **Segmented Control & Switch Polish**: Clean layout preventing label overlap, segmented text truncation ("Saved"), or right-edge switch clipping.
-- **Simplified Copy**: Straightforward heading and compass descriptions without wordy text.
+- **Integrated Top Bar Menu Button**: Replaced floating window overlay with a native button built directly into the app's top bar right next to the Circle Name pill.
+- **Full Touch Responsiveness**: Eliminated secondary window overlay touch interception. All mod menu buttons, cells, and map gestures work with 100% responsiveness.
+- **Enhanced Sheet Backdrop**: Rich liquid glass material backdrop preventing touch pass-through to background app views.
 
 ---
 
@@ -58,7 +56,7 @@ Because LSpoof is a tweak library (`.dylib`) rather than a standalone applicatio
 ## 🎮 How to Open the Menu
 
 1. Launch your sideloaded app with `LocationSpoofer.dylib` injected.
-2. **Tap the floating menu button** on screen (placed right next to the settings gear). You can drag it anywhere on screen or toggle it off in options.
+2. **Tap the location menu button in the top bar** (placed right next to the Circle Name pill).
 3. *Alternative gesture:* Press and hold three fingers anywhere on the screen for 0.8 seconds.
 4. Set your target location and tap **Save Settings**.
 

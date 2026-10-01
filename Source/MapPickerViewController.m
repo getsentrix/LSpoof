@@ -25,7 +25,11 @@ static const CGFloat kLSMapHeight = 220.0;
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    self.view.backgroundColor = UIColor.clearColor;
+    self.view.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull tc) {
+        return (tc.userInterfaceStyle == UIUserInterfaceStyleDark)
+            ? [UIColor colorWithWhite:0.08 alpha:0.75]
+            : [UIColor colorWithWhite:0.96 alpha:0.75];
+    }];
     self.hasSelectedCoordinate = NO;
 
     PersistenceManager *store = [PersistenceManager shared];
@@ -181,11 +185,16 @@ static const CGFloat kLSMapHeight = 220.0;
 #pragma mark - Interface Setup
 
 - (void)buildInterface {
-    self.view.backgroundColor = UIColor.clearColor;
+    self.view.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor * _Nonnull(UITraitCollection * _Nonnull tc) {
+        return (tc.userInterfaceStyle == UIUserInterfaceStyleDark)
+            ? [UIColor colorWithWhite:0.08 alpha:0.75]
+            : [UIColor colorWithWhite:0.96 alpha:0.75];
+    }];
 
     UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterial];
     UIVisualEffectView *backdropBlurView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
     backdropBlurView.translatesAutoresizingMaskIntoConstraints = NO;
+    backdropBlurView.userInteractionEnabled = NO;
     [self.view insertSubview:backdropBlurView atIndex:0];
     [NSLayoutConstraint activateConstraints:@[
         [backdropBlurView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
@@ -204,9 +213,8 @@ static const CGFloat kLSMapHeight = 220.0;
     self.tableView.delaysContentTouches = NO;
     [self.view addSubview:self.tableView];
 
-    UILayoutGuide *safeArea = self.view.safeAreaLayoutGuide;
     [NSLayoutConstraint activateConstraints:@[
-        [self.tableView.topAnchor constraintEqualToAnchor:safeArea.topAnchor],
+        [self.tableView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
         [self.tableView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [self.tableView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
         [self.tableView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
@@ -842,10 +850,10 @@ static const CGFloat kLSMapHeight = 220.0;
     self.floatingButtonSwitch.on = [[PersistenceManager shared] floatingButtonEnabled];
     [self.floatingButtonSwitch addTarget:self action:@selector(handleFloatingButtonToggled:) forControlEvents:UIControlEventValueChanged];
 
-    self.floatingButtonCell = [self ls_createToggleCellWithBadgeSymbol:@"button.programmable"
-                                                            badgeColor:UIColor.systemTealColor
-                                                                 title:@"Floating Button"
-                                                              subtitle:@"Quick-access menu button on screen"
+    self.floatingButtonCell = [self ls_createToggleCellWithBadgeSymbol:@"location.fill"
+                                                            badgeColor:UIColor.systemPurpleColor
+                                                                 title:@"Top Bar Button"
+                                                              subtitle:@"Access menu button in app header"
                                                                control:self.floatingButtonSwitch];
 
     // 5: Action Button Cells (Apply/Update Location)
