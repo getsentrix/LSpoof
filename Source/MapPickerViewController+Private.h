@@ -63,7 +63,8 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UIButton *bookmarkSaveButton;
 
 @property (nonatomic, strong) UISwitch *fluctuationSwitch;
-@property (nonatomic, strong) UITextField *fluctuationRadiusField;
+@property (nonatomic, strong) UISlider *fluctuationRadiusSlider;
+@property (nonatomic, strong) UILabel *fluctuationRadiusLabel;
 @property (nonatomic, strong) UISwitch *keepLastSpoofSwitch;
 @property (nonatomic, strong) UISwitch *showRealLocationSwitch;
 
@@ -77,6 +78,13 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UIButton *applyButton;
 @property (nonatomic, strong) UIButton *cancelButton;
 @property (nonatomic, strong) UIButton *stopButton;
+
+// Hero Status Card (Big Active/Inactive indicator & switch)
+@property (nonatomic, strong) UITableViewCell *heroStatusCell;
+@property (nonatomic, strong) UIView *heroStatusDot;
+@property (nonatomic, strong) UILabel *heroStatusTitleLabel;
+@property (nonatomic, strong) UILabel *heroStatusSubtitleLabel;
+@property (nonatomic, strong) UISwitch *heroStatusSwitch;
 
 // Retained static cells for Static Mode
 @property (nonatomic, strong) UITableViewCell *previewCell;
@@ -92,6 +100,7 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UITableViewCell *applyButtonCell;
 @property (nonatomic, strong) UITableViewCell *stopButtonCell;
 @property (nonatomic, strong) UITableViewCell *cancelButtonCell;
+
 
 // Retained static cells for Route Mode
 @property (nonatomic, strong) UITableViewCell *routeStartCell;
@@ -151,9 +160,13 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 - (void)handleApply;
 - (void)handleCancel;
 - (void)handleStopSpoofing;
+- (void)updateHeroStatusCell;
+- (void)handleHeroStatusSwitchToggled:(UISwitch *)sender;
+- (void)handleFluctuationRadiusSliderChanged:(UISlider *)sender;
 - (void)ls_updateTableHeaderLayout;
 
 @end
+
 
 @interface MapPickerViewController (LSRouteUI) <LSRouteSimulatorDelegate>
 

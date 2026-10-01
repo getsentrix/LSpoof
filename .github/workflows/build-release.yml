@@ -65,23 +65,23 @@ jobs:
             if [[ "${{ github.ref }}" == refs/tags/* ]]; then
               TAG="${GITHUB_REF#refs/tags/}"
             else
-              TAG="v1.1.1"
+              TAG="v1.1.2"
             fi
           fi
           echo "Using tag: $TAG"
           cat << 'EOF' > notes.md
-          ## v1.1.1 - Inset Grouped UI Polish, Glitch Fixes & Apple SF Symbols
+          ## LSpoof v1.1.2 - Hero Status Indicator, Current Location & Drift Slider
 
           ### What's New
-          - **Retained Static Cell Architecture**: Modern `UITableViewStyleInsetGrouped` layout using retained static cells to eliminate layout thrashing, view re-parenting, and keyboard dismiss glitches during table reloads.
-          - **Fixed Coordinate Typing Bug**: Smooth, continuous coordinate entry without cursor jumping, string reformatting disruptions, or premature haptic error shakes. Added `+/-` sign toggle on keyboard toolbar.
-          - **Resilient Unit & Number Parsing**: Robust scanning of coordinates, altitude, drift radius, and custom speed values with or without unit suffixes (`m`, `km/h`).
-          - **Collapsible Header & Fluid Animations**: Clean animated collapsing of search bar and coordinate mode segment on Bookmarks tab; auto-collapsing status pill layout.
-          - **Bookmark Data Integrity & Non-Disruptive Editing**: Direct `indexPath` resolution on Apply action avoiding stale index bugs after deletion; smooth table editing animations without flickering.
-          - **Touch & Gesture Polish**: Standard 500ms long-press threshold with touch filtering protecting annotation pin drag gestures.
+          - **Auto Current Location**: Map preview automatically centers on physical device GPS location on launch instead of default California coordinates.
+          - **Prominent Status Indicator**: Section 0 hero card with 16pt status indicator dot and instant Active/Inactive toggle switch.
+          - **Bookmarks Reorganized**: Saved bookmarks now appear above Recents for faster access.
+          - **Recognizable Place Names**: Recents rows display reverse-geocoded place names and street addresses.
+          - **Drift Slider**: Smooth continuous slider (5m–150m) replaces numeric text input for natural GPS fluctuation.
+          - **Mobile-Optimized Website**: Lightweight showcase site with primary SideStore and secondary LiveContainer buttons.
 
           ### Assets
-          - `LocationSpoofer.dylib`: Sideloadable arm64 Mach-O dynamic library for iOS 16.0+
+          - `LocationSpoofer.dylib`: Sideloadable arm64 Mach-O dynamic library for iOS 14.0+
           EOF
 
           gh release view "$TAG" --repo getsentrix/LSpoof >/dev/null 2>&1 && {
@@ -89,7 +89,7 @@ jobs:
           } || {
             gh release create "$TAG" LocationSpoofer.dylib \
               --repo getsentrix/LSpoof \
-              --title "v1.1.1 - Inset Grouped UI Polish, Glitch Fixes & Apple SF Symbols" \
+              --title "$TAG - Hero Status, Current Location & Drift Slider" \
               --notes-file notes.md
           }
 

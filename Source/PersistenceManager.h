@@ -20,9 +20,13 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) double fluctuationRadius;
 @property (nonatomic, assign) BOOL keepLastSpoof;
 @property (nonatomic, assign) BOOL showRealLocation;
+@property (nonatomic, assign) CLLocationCoordinate2D lastRealCoordinate;
+@property (nonatomic, assign) BOOL hasRealCoordinate;
 
 - (NSArray<NSDictionary *> *)recentLocations;
 - (void)recordRecentCoordinate:(CLLocationCoordinate2D)coordinate name:(nullable NSString *)name;
+- (void)updateRecentCoordinateName:(NSString *)name forCoordinate:(CLLocationCoordinate2D)coordinate;
+
 
 - (BOOL)setSpoofCoordinate:(CLLocationCoordinate2D)coordinate enabled:(BOOL)enabled;
 - (void)clearSpoof;

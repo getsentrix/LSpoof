@@ -234,6 +234,14 @@ static void LSSwizzleDelegateIfNeeded(id delegate) {
 
 static void LSHookDidUpdateLocations(id self, SEL _cmd, CLLocationManager *manager, NSArray<CLLocation *> *locations) {
     (void)_cmd;
+    if (locations.count > 0) {
+        CLLocation *real = locations.lastObject;
+        if (CLLocationCoordinate2DIsValid(real.coordinate) && (real.coordinate.latitude != 0 || real.coordinate.longitude != 0)) {
+            [PersistenceManager shared].lastRealCoordinate = real.coordinate;
+            [PersistenceManager shared].hasRealCoordinate = YES;
+        }
+    }
+
     NSArray<CLLocation *> *deliveredLocations = locations;
     if (LSShouldSpoof()) {
         deliveredLocations = @[LSCreateSpoofedLocation()];
@@ -246,6 +254,11 @@ static void LSHookDidUpdateLocations(id self, SEL _cmd, CLLocationManager *manag
 
 static void LSHookDidUpdateToLocation(id self, SEL _cmd, CLLocationManager *manager, CLLocation *newLocation, CLLocation *oldLocation) {
     (void)_cmd;
+    if (newLocation && CLLocationCoordinate2DIsValid(newLocation.coordinate) && (newLocation.coordinate.latitude != 0 || newLocation.coordinate.longitude != 0)) {
+        [PersistenceManager shared].lastRealCoordinate = newLocation.coordinate;
+        [PersistenceManager shared].hasRealCoordinate = YES;
+    }
+
     CLLocation *deliveredLocation = newLocation;
     if (LSShouldSpoof()) {
         deliveredLocation = LSCreateSpoofedLocation();
@@ -255,6 +268,7 @@ static void LSHookDidUpdateToLocation(id self, SEL _cmd, CLLocationManager *mana
         (void (*)(id, SEL, CLLocationManager *, CLLocation *, CLLocation *))objc_msgSend;
     originalIMP(self, ls_hookDidUpdateToLocationSEL, manager, deliveredLocation, oldLocation);
 }
+
 
 @interface CLLocationManager (LSHooks)
 - (void)lsp_setDelegate:(id<CLLocationManagerDelegate>)delegate;

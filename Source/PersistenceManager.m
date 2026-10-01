@@ -65,10 +65,13 @@ static const NSUInteger kLSMaxRecentLocations = 5;
         _cachedFluctuationRadius = 50.0;
         _cachedKeepLastSpoof = NO;
         _cachedShowRealLocation = NO;
+        _lastRealCoordinate = kCLLocationCoordinate2DInvalid;
+        _hasRealCoordinate = NO;
         _cachedRecents = [NSMutableArray array];
     }
     return self;
 }
+
 
 + (void)loadEarly {
     PersistenceManager *manager = [PersistenceManager shared];
@@ -266,26 +269,87 @@ static const NSUInteger kLSMaxRecentLocations = 5;
     os_unfair_lock_lock(&_lock);
     [self reloadRecentsLocked];
 
-        static NSISO8601DateFormatter *formatter = nil;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            formatter = [[NSISO8601DateFormatter alloc] init];
-        });
+    static NSISO8601DateFormatter *formatter = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        formatter = [[NSISO8601DateFormatter alloc] init];
+    });
 
-        NSDictionary *entry = @{
-            kRecentLatitudeKey: @(coordinate.latitude),
-            kRecentLongitudeKey: @(coordinate.longitude),
-            kRecentNameKey: name.length > 0 ? name : @"Location",
-            kRecentDateKey: [formatter stringFromDate:[NSDate date]]
-        };
+    NSString *initialName = name.length > 0 ? name : @"Resolving address...";
+    NSDictionary *entry = @{
+        kRecentLatitudeKey: @(coordinate.latitude),
+        kRecentLongitudeKey: @(coordinate.longitude),
+        kRecentNameKey: initialName,
+        kRecentDateKey: [formatter stringFromDate:[NSDate date]]
+    };
 
-        [self.cachedRecents insertObject:entry atIndex:0];
-        while (self.cachedRecents.count > kLSMaxRecentLocations) {
-            [self.cachedRecents removeLastObject];
+    [self.cachedRecents insertObject:entry atIndex:0];
+    while (self.cachedRecents.count > kLSMaxRecentLocations) {
+        [self.cachedRecents removeLastObject];
+    }
+    [self.defaults setObject:[self.cachedRecents copy] forKey:kKeyRecentLocations];
+    os_unfair_lock_unlock(&_lock);
+
+    // If no custom name was provided, asynchronously reverse geocode to recognizable place / address
+    if (name.length == 0) {
+        CLLocation *loc = [[CLLocation alloc] initWithLatitude:coordinate.latitude longitude:coordinate.longitude];
+        CLGeocoder *geocoder = [[CLGeocoder alloc] init];
+        __weak typeof(self) weakSelf = self;
+        [geocoder reverseGeocodeLocation:loc completionHandler:^(NSArray<CLPlacemark *> *placemarks, NSError *error) {
+            if (!error && placemarks.count > 0) {
+                CLPlacemark *pm = placemarks.firstObject;
+                NSString *resolved = nil;
+                if (pm.areasOfInterest.firstObject.length > 0) {
+                    resolved = pm.areasOfInterest.firstObject;
+                } else if (pm.name.length > 0 && pm.thoroughfare.length > 0 && ![pm.name isEqualToString:pm.thoroughfare]) {
+                    resolved = pm.name;
+                } else {
+                    NSMutableArray *components = [NSMutableArray array];
+                    if (pm.subThoroughfare.length > 0 && pm.thoroughfare.length > 0) {
+                        [components addObject:[NSString stringWithFormat:@"%@ %@", pm.subThoroughfare, pm.thoroughfare]];
+                    } else if (pm.thoroughfare.length > 0) {
+                        [components addObject:pm.thoroughfare];
+                    } else if (pm.name.length > 0) {
+                        [components addObject:pm.name];
+                    }
+                    if (pm.locality.length > 0) {
+                        [components addObject:pm.locality];
+                    }
+                    if (components.count > 0) {
+                        resolved = [components componentsJoinedByString:@", "];
+                    }
+                }
+                if (resolved.length > 0) {
+                    [weakSelf updateRecentCoordinateName:resolved forCoordinate:coordinate];
+                }
+            }
+        }];
+    }
+}
+
+- (void)updateRecentCoordinateName:(NSString *)name forCoordinate:(CLLocationCoordinate2D)coordinate {
+    if (name.length == 0) return;
+    os_unfair_lock_lock(&_lock);
+    [self reloadRecentsLocked];
+    BOOL updated = NO;
+    for (NSUInteger i = 0; i < self.cachedRecents.count; i++) {
+        NSDictionary *dict = self.cachedRecents[i];
+        double lat = [dict[kRecentLatitudeKey] doubleValue];
+        double lon = [dict[kRecentLongitudeKey] doubleValue];
+        if (fabs(lat - coordinate.latitude) < 0.0001 && fabs(lon - coordinate.longitude) < 0.0001) {
+            NSMutableDictionary *m = [dict mutableCopy];
+            m[kRecentNameKey] = name;
+            self.cachedRecents[i] = [m copy];
+            updated = YES;
+            break;
         }
+    }
+    if (updated) {
         [self.defaults setObject:[self.cachedRecents copy] forKey:kKeyRecentLocations];
+    }
     os_unfair_lock_unlock(&_lock);
 }
+
 
 - (BOOL)setSpoofCoordinate:(CLLocationCoordinate2D)coordinate enabled:(BOOL)enabled {
     if (![self isValidLatitude:coordinate.latitude longitude:coordinate.longitude]) {

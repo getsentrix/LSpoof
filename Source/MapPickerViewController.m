@@ -25,13 +25,29 @@ static const CGFloat kLSMapHeight = 220.0;
     [super viewDidLoad];
 
     self.view.backgroundColor = UIColor.systemGroupedBackgroundColor;
-    self.selectedCoordinate = CLLocationCoordinate2DMake(37.7749, -122.4194);
     self.hasSelectedCoordinate = NO;
 
     PersistenceManager *store = [PersistenceManager shared];
     if ([store isSpoofingEnabled] || [store hasStoredCoordinate]) {
         self.selectedCoordinate = [store spoofCoordinate];
         self.hasSelectedCoordinate = YES;
+    } else if (store.hasRealCoordinate && CLLocationCoordinate2DIsValid(store.lastRealCoordinate) && (store.lastRealCoordinate.latitude != 0 || store.lastRealCoordinate.longitude != 0)) {
+        self.selectedCoordinate = store.lastRealCoordinate;
+        self.hasSelectedCoordinate = YES;
+    } else {
+        LSSetHooksBypassed(YES);
+        CLLocationManager *locManager = [[CLLocationManager alloc] init];
+        CLLocation *loc = locManager.location;
+        LSSetHooksBypassed(NO);
+        if (loc && CLLocationCoordinate2DIsValid(loc.coordinate) && (loc.coordinate.latitude != 0 || loc.coordinate.longitude != 0)) {
+            self.selectedCoordinate = loc.coordinate;
+            self.hasSelectedCoordinate = YES;
+            store.lastRealCoordinate = loc.coordinate;
+            store.hasRealCoordinate = YES;
+        } else {
+            self.selectedCoordinate = CLLocationCoordinate2DMake(0, 0);
+            self.hasSelectedCoordinate = NO;
+        }
     }
     self.panelTab = LSMapPickerPanelTabMap;
     self.coordinateMode = LSMapPickerCoordinateModeStatic;
@@ -52,9 +68,12 @@ static const CGFloat kLSMapHeight = 220.0;
     [self updatePanelTabVisibility];
 
     self.fluctuationSwitch.on = store.fluctuationEnabled;
-    self.fluctuationRadiusField.text = [NSString stringWithFormat:@"%.0f m", store.fluctuationRadius];
+    self.fluctuationRadiusSlider.value = (float)store.fluctuationRadius;
+    self.fluctuationRadiusLabel.text = [NSString stringWithFormat:@"%.0f m", store.fluctuationRadius];
     self.keepLastSpoofSwitch.on = store.keepLastSpoof;
     self.showRealLocationSwitch.on = store.showRealLocation;
+    [self updateHeroStatusCell];
+
 
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(ls_keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(ls_keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
@@ -497,9 +516,17 @@ static const CGFloat kLSMapHeight = 220.0;
     self.fluctuationSwitch = [[UISwitch alloc] init];
     [self.fluctuationSwitch addTarget:self action:@selector(handleFluctuationToggle) forControlEvents:UIControlEventValueChanged];
 
-    self.fluctuationRadiusField = [self ls_createInputTextFieldWithPlaceholder:@"e.g. 50 m"];
-    self.fluctuationRadiusField.keyboardType = UIKeyboardTypeNumberPad;
-    [self.fluctuationRadiusField addTarget:self action:@selector(handleFluctuationRadiusChanged) forControlEvents:UIControlEventEditingDidEnd];
+    self.fluctuationRadiusLabel = [[UILabel alloc] init];
+    self.fluctuationRadiusLabel.font = [UIFont monospacedDigitSystemFontOfSize:15.0 weight:UIFontWeightSemibold];
+    self.fluctuationRadiusLabel.textColor = UIColor.secondaryLabelColor;
+    self.fluctuationRadiusLabel.textAlignment = NSTextAlignmentRight;
+
+    self.fluctuationRadiusSlider = [[UISlider alloc] init];
+    self.fluctuationRadiusSlider.minimumValue = 5.0f;
+    self.fluctuationRadiusSlider.maximumValue = 150.0f;
+    self.fluctuationRadiusSlider.tintColor = UIColor.systemPurpleColor;
+    [self.fluctuationRadiusSlider addTarget:self action:@selector(handleFluctuationRadiusSliderChanged:) forControlEvents:UIControlEventValueChanged];
+
 
     // Other switches
     self.keepLastSpoofSwitch = [[UISwitch alloc] init];
@@ -566,13 +593,63 @@ static const CGFloat kLSMapHeight = 220.0;
 #pragma mark - Retained Static Cells Setup
 
 - (void)buildStaticCells {
-    // 0: Target Coordinate Preview & Bookmark Cell
+    // 0: Hero Status Card (Big Active / Inactive indicator & switch)
+    self.heroStatusCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    self.heroStatusCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.heroStatusCell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    self.heroStatusDot = [[UIView alloc] init];
+    self.heroStatusDot.translatesAutoresizingMaskIntoConstraints = NO;
+    self.heroStatusDot.layer.cornerRadius = 8.0;
+    self.heroStatusDot.backgroundColor = UIColor.systemOrangeColor;
+    [self.heroStatusCell.contentView addSubview:self.heroStatusDot];
+
+    self.heroStatusTitleLabel = [[UILabel alloc] init];
+    self.heroStatusTitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.heroStatusTitleLabel.text = @"Spoofing Inactive";
+    self.heroStatusTitleLabel.font = [UIFont systemFontOfSize:19.0 weight:UIFontWeightBold];
+    self.heroStatusTitleLabel.textColor = UIColor.labelColor;
+    [self.heroStatusCell.contentView addSubview:self.heroStatusTitleLabel];
+
+    self.heroStatusSubtitleLabel = [[UILabel alloc] init];
+    self.heroStatusSubtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.heroStatusSubtitleLabel.text = @"Using device native GPS · Toggle to activate";
+    self.heroStatusSubtitleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightRegular];
+    self.heroStatusSubtitleLabel.textColor = UIColor.secondaryLabelColor;
+    [self.heroStatusCell.contentView addSubview:self.heroStatusSubtitleLabel];
+
+    self.heroStatusSwitch = [[UISwitch alloc] init];
+    self.heroStatusSwitch.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.heroStatusSwitch addTarget:self action:@selector(handleHeroStatusSwitchToggled:) forControlEvents:UIControlEventValueChanged];
+    [self.heroStatusCell.contentView addSubview:self.heroStatusSwitch];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [self.heroStatusDot.leadingAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.leadingAnchor constant:16.0],
+        [self.heroStatusDot.centerYAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.centerYAnchor],
+        [self.heroStatusDot.widthAnchor constraintEqualToConstant:16.0],
+        [self.heroStatusDot.heightAnchor constraintEqualToConstant:16.0],
+
+        [self.heroStatusTitleLabel.leadingAnchor constraintEqualToAnchor:self.heroStatusDot.trailingAnchor constant:12.0],
+        [self.heroStatusTitleLabel.topAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.topAnchor constant:14.0],
+        [self.heroStatusTitleLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.heroStatusSwitch.leadingAnchor constant:-12.0],
+
+        [self.heroStatusSubtitleLabel.leadingAnchor constraintEqualToAnchor:self.heroStatusTitleLabel.leadingAnchor],
+        [self.heroStatusSubtitleLabel.topAnchor constraintEqualToAnchor:self.heroStatusTitleLabel.bottomAnchor constant:3.0],
+        [self.heroStatusSubtitleLabel.bottomAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.bottomAnchor constant:-14.0],
+        [self.heroStatusSubtitleLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.heroStatusSwitch.leadingAnchor constant:-12.0],
+
+        [self.heroStatusSwitch.trailingAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.trailingAnchor constant:-16.0],
+        [self.heroStatusSwitch.centerYAnchor constraintEqualToAnchor:self.heroStatusCell.contentView.centerYAnchor]
+    ]];
+
+    // 1: Target Coordinate Preview & Bookmark Cell
     self.previewCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     self.previewCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
     self.previewCell.selectionStyle = UITableViewCellSelectionStyleNone;
 
     UIView *previewBadge = [MapPickerViewController iconBadgeWithSymbolName:@"mappin.and.ellipse" backgroundColor:UIColor.systemRedColor];
     [self.previewCell.contentView addSubview:previewBadge];
+
 
     UILabel *previewTitle = [[UILabel alloc] init];
     previewTitle.translatesAutoresizingMaskIntoConstraints = NO;
@@ -675,10 +752,43 @@ static const CGFloat kLSMapHeight = 220.0;
                                                            subtitle:@"Adds subtle randomized GPS drift"
                                                             control:self.fluctuationSwitch];
 
-    self.fluctuationRadiusCell = [self ls_createCoordinateCellWithBadgeSymbol:@"circle.dashed"
-                                                                   badgeColor:[UIColor.systemPurpleColor colorWithAlphaComponent:0.75]
-                                                                        title:@"Drift Radius"
-                                                                    textField:self.fluctuationRadiusField];
+    self.fluctuationRadiusCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    self.fluctuationRadiusCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    self.fluctuationRadiusCell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    UIView *radiusBadge = [MapPickerViewController iconBadgeWithSymbolName:@"circle.dashed" backgroundColor:[UIColor.systemPurpleColor colorWithAlphaComponent:0.75]];
+    [self.fluctuationRadiusCell.contentView addSubview:radiusBadge];
+
+    UILabel *radiusTitle = [[UILabel alloc] init];
+    radiusTitle.translatesAutoresizingMaskIntoConstraints = NO;
+    radiusTitle.text = @"Drift Radius";
+    radiusTitle.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightRegular];
+    radiusTitle.textColor = UIColor.labelColor;
+    [self.fluctuationRadiusCell.contentView addSubview:radiusTitle];
+
+    self.fluctuationRadiusLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.fluctuationRadiusCell.contentView addSubview:self.fluctuationRadiusLabel];
+
+    self.fluctuationRadiusSlider.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.fluctuationRadiusCell.contentView addSubview:self.fluctuationRadiusSlider];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [radiusBadge.leadingAnchor constraintEqualToAnchor:self.fluctuationRadiusCell.contentView.leadingAnchor constant:16.0],
+        [radiusBadge.topAnchor constraintEqualToAnchor:self.fluctuationRadiusCell.contentView.topAnchor constant:12.0],
+
+        [radiusTitle.leadingAnchor constraintEqualToAnchor:radiusBadge.trailingAnchor constant:12.0],
+        [radiusTitle.centerYAnchor constraintEqualToAnchor:radiusBadge.centerYAnchor],
+
+        [self.fluctuationRadiusLabel.trailingAnchor constraintEqualToAnchor:self.fluctuationRadiusCell.contentView.trailingAnchor constant:-16.0],
+        [self.fluctuationRadiusLabel.centerYAnchor constraintEqualToAnchor:radiusBadge.centerYAnchor],
+        [self.fluctuationRadiusLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:radiusTitle.trailingAnchor constant:8.0],
+
+        [self.fluctuationRadiusSlider.topAnchor constraintEqualToAnchor:radiusBadge.bottomAnchor constant:10.0],
+        [self.fluctuationRadiusSlider.leadingAnchor constraintEqualToAnchor:self.fluctuationRadiusCell.contentView.leadingAnchor constant:16.0],
+        [self.fluctuationRadiusSlider.trailingAnchor constraintEqualToAnchor:self.fluctuationRadiusCell.contentView.trailingAnchor constant:-16.0],
+        [self.fluctuationRadiusSlider.bottomAnchor constraintEqualToAnchor:self.fluctuationRadiusCell.contentView.bottomAnchor constant:-12.0]
+    ]];
+
 
     self.keepLastSpoofCell = [self ls_createToggleCellWithBadgeSymbol:@"clock.arrow.circlepath"
                                                            badgeColor:UIColor.systemGreenColor
@@ -818,13 +928,43 @@ static const CGFloat kLSMapHeight = 220.0;
     self.pinAnnotation = [[MKPointAnnotation alloc] init];
     self.pinAnnotation.title = @"Spoofed location";
     self.pinAnnotation.subtitle = @"Drag to adjust";
-    self.pinAnnotation.coordinate = self.selectedCoordinate;
-    [self.mapView addAnnotation:self.pinAnnotation];
 
-    MKCoordinateRegion region = MKCoordinateRegionMakeWithDistance(self.selectedCoordinate, 1500.0, 1500.0);
-    [self.mapView setRegion:region animated:NO];
+    if (self.hasSelectedCoordinate && CLLocationCoordinate2DIsValid(self.selectedCoordinate) && (self.selectedCoordinate.latitude != 0 || self.selectedCoordinate.longitude != 0)) {
+        self.pinAnnotation.coordinate = self.selectedCoordinate;
+        [self.mapView addAnnotation:self.pinAnnotation];
+        MKCoordinateRegion region = MKCoordinateRegionMakeWithDistance(self.selectedCoordinate, 1500.0, 1500.0);
+        [self.mapView setRegion:region animated:NO];
+    } else {
+        CLLocation *userLoc = self.mapView.userLocation.location;
+        if (userLoc && CLLocationCoordinate2DIsValid(userLoc.coordinate) && (userLoc.coordinate.latitude != 0 || userLoc.coordinate.longitude != 0)) {
+            self.selectedCoordinate = userLoc.coordinate;
+            self.hasSelectedCoordinate = YES;
+            self.pinAnnotation.coordinate = userLoc.coordinate;
+            [self.mapView addAnnotation:self.pinAnnotation];
+            MKCoordinateRegion region = MKCoordinateRegionMakeWithDistance(userLoc.coordinate, 1500.0, 1500.0);
+            [self.mapView setRegion:region animated:NO];
+            [self syncFieldsFromCoordinate];
+        }
+    }
     [self updateSearchCompleterRegion];
 }
+
+- (void)mapView:(MKMapView *)mapView didUpdateUserLocation:(MKUserLocation *)userLocation {
+    if (!self.hasSelectedCoordinate && userLocation.location) {
+        CLLocationCoordinate2D coord = userLocation.location.coordinate;
+        if (CLLocationCoordinate2DIsValid(coord) && (coord.latitude != 0 || coord.longitude != 0)) {
+            self.selectedCoordinate = coord;
+            self.hasSelectedCoordinate = YES;
+            [PersistenceManager shared].lastRealCoordinate = coord;
+            [PersistenceManager shared].hasRealCoordinate = YES;
+            [self syncFieldsFromCoordinate];
+            [self updatePinOnMapAnimated:YES];
+            MKCoordinateRegion region = MKCoordinateRegionMakeWithDistance(coord, 1500.0, 1500.0);
+            [self.mapView setRegion:region animated:YES];
+        }
+    }
+}
+
 
 - (void)syncFieldsFromCoordinate {
     self.suppressFieldSync = YES;
@@ -1008,7 +1148,7 @@ static const CGFloat kLSMapHeight = 220.0;
     PersistenceManager *store = [PersistenceManager shared];
     store.fluctuationEnabled = self.fluctuationSwitch.isOn;
 
-    NSIndexPath *radiusPath = [NSIndexPath indexPathForRow:1 inSection:3];
+    NSIndexPath *radiusPath = [NSIndexPath indexPathForRow:1 inSection:4];
     __weak typeof(self) weakSelf = self;
     [self.tableView performBatchUpdates:^{
         if (weakSelf.fluctuationSwitch.isOn) {
@@ -1019,26 +1159,62 @@ static const CGFloat kLSMapHeight = 220.0;
     } completion:^(BOOL finished) {
         (void)finished;
         weakSelf.fluctuationSwitch.userInteractionEnabled = YES;
-        if (weakSelf.fluctuationSwitch.isOn) {
-            [weakSelf.fluctuationRadiusField becomeFirstResponder];
-        }
     }];
 }
 
-- (void)handleFluctuationRadiusChanged {
-    NSString *text = [self.fluctuationRadiusField.text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
-    double radius = 50.0;
-    if (text.length > 0) {
-        NSNumber *value = [self ls_parsedCoordinateComponentFromText:text];
-        radius = value ? value.doubleValue : 50.0;
-    } else {
-        radius = [PersistenceManager shared].fluctuationRadius;
-    }
-    if (radius < 1.0) radius = 1.0;
-    if (radius > 1000.0) radius = 1000.0;
+- (void)handleFluctuationRadiusSliderChanged:(UISlider *)sender {
+    double radius = round(sender.value);
+    self.fluctuationRadiusLabel.text = [NSString stringWithFormat:@"%.0f m", radius];
     [PersistenceManager shared].fluctuationRadius = radius;
-    self.fluctuationRadiusField.text = [NSString stringWithFormat:@"%.0f m", radius];
 }
+
+- (void)updateHeroStatusCell {
+    if (!self.heroStatusCell) return;
+    PersistenceManager *store = [PersistenceManager shared];
+    LSRouteSimulator *simulator = [LSRouteSimulator shared];
+    BOOL active = [store isSpoofingEnabled] || simulator.isSimulating;
+
+    self.heroStatusSwitch.on = active;
+    if (active) {
+        self.heroStatusDot.backgroundColor = UIColor.systemGreenColor;
+        self.heroStatusTitleLabel.text = simulator.isSimulating ? @"Simulation Active" : @"Spoofing Active";
+        self.heroStatusSubtitleLabel.text = @"Apps receive your chosen GPS coordinates";
+    } else {
+        self.heroStatusDot.backgroundColor = UIColor.systemOrangeColor;
+        self.heroStatusTitleLabel.text = @"Spoofing Inactive";
+        self.heroStatusSubtitleLabel.text = @"Using device native GPS · Toggle to activate";
+    }
+}
+
+- (void)handleHeroStatusSwitchToggled:(UISwitch *)sender {
+    PersistenceManager *store = [PersistenceManager shared];
+    if (sender.isOn) {
+        if (![self applyFieldsToCoordinate] || ![self applyAltitudeField]) {
+            [self showInvalidCoordinateFeedback];
+            sender.on = NO;
+            return;
+        }
+        if (![store setSpoofCoordinate:self.selectedCoordinate enabled:YES]) {
+            [self showInvalidCoordinateFeedback];
+            sender.on = NO;
+            return;
+        }
+        [store recordRecentCoordinate:self.selectedCoordinate name:nil];
+        [self playApplyHaptic];
+        [self updateHeroStatusCell];
+        [self refreshStatusPill];
+        [self.tableView reloadSections:[NSIndexSet indexSetWithIndex:5] withRowAnimation:UITableViewRowAnimationNone];
+    } else {
+        [[LSRouteSimulator shared] stop];
+        [store clearSpoof];
+        store.simulationWasActive = NO;
+        [self playSimulationStopHaptic];
+        [self updateHeroStatusCell];
+        [self refreshStatusPill];
+        [self.tableView reloadSections:[NSIndexSet indexSetWithIndex:5] withRowAnimation:UITableViewRowAnimationNone];
+    }
+}
+
 
 - (void)handleKeepLastSpoofToggle {
     [PersistenceManager shared].keepLastSpoof = self.keepLastSpoofSwitch.isOn;
@@ -1240,7 +1416,6 @@ static const CGFloat kLSMapHeight = 220.0;
     self.latitudeField.inputAccessoryView = toolbar;
     self.longitudeField.inputAccessoryView = toolbar;
     self.altitudeField.inputAccessoryView = toolbar;
-    self.fluctuationRadiusField.inputAccessoryView = toolbar;
     self.customSpeedField.inputAccessoryView = toolbar;
 }
 
@@ -1265,7 +1440,7 @@ static const CGFloat kLSMapHeight = 220.0;
 }
 
 - (void)textFieldDidBeginEditing:(UITextField *)textField {
-    if (textField == self.altitudeField || textField == self.fluctuationRadiusField) {
+    if (textField == self.altitudeField) {
         NSString *raw = [textField.text stringByReplacingOccurrencesOfString:@" m" withString:@""];
         textField.text = [raw stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
     } else if (textField == self.customSpeedField) {
@@ -1303,9 +1478,8 @@ static const CGFloat kLSMapHeight = 220.0;
         } else {
             textField.text = [NSString stringWithFormat:@"%.0f m", [PersistenceManager shared].altitude];
         }
-    } else if (textField == self.fluctuationRadiusField) {
-        [self handleFluctuationRadiusChanged];
     } else if (textField == self.customSpeedField) {
+
         NSNumber *spd = [self ls_parsedCoordinateComponentFromText:textField.text];
         double val = (spd && spd.doubleValue >= 1.0 && spd.doubleValue <= 500.0) ? spd.doubleValue : 30.0;
         [LSRouteSimulator shared].customSpeedKmh = val;
@@ -1363,6 +1537,7 @@ static const CGFloat kLSMapHeight = 220.0;
 
     BOOL showReal = [[PersistenceManager shared] isSpoofingEnabled] && [PersistenceManager shared].showRealLocation;
     self.mapView.showsUserLocation = ![[PersistenceManager shared] isSpoofingEnabled] || showReal;
+    [self updateHeroStatusCell];
 }
 
 - (void)handleStatusPillTapped {
@@ -1400,8 +1575,11 @@ static const CGFloat kLSMapHeight = 220.0;
         return;
     }
 
-    [store recordRecentCoordinate:self.selectedCoordinate name:nil];
+    NSString *name = (self.searchBar.text.length > 0) ? self.searchBar.text : nil;
+    [store recordRecentCoordinate:self.selectedCoordinate name:name];
     [self playApplyHaptic];
+    [self updateHeroStatusCell];
+    [self refreshStatusPill];
     LSSetHooksBypassed(NO);
     [self dismissViewControllerAnimated:YES completion:nil];
 }
@@ -1416,9 +1594,12 @@ static const CGFloat kLSMapHeight = 220.0;
     [[PersistenceManager shared] clearSpoof];
     [PersistenceManager shared].simulationWasActive = NO;
     [self playSimulationStopHaptic];
+    [self updateHeroStatusCell];
+    [self refreshStatusPill];
     LSSetHooksBypassed(NO);
     [self dismissViewControllerAnimated:YES completion:nil];
 }
+
 
 - (void)handleMapTap:(UITapGestureRecognizer *)gesture {
     if (gesture.state != UIGestureRecognizerStateEnded) return;
@@ -1527,8 +1708,8 @@ static const CGFloat kLSMapHeight = 220.0;
         return [self ls_routeNumberOfSections];
     }
 
-    // Static mode: 5 sections
-    return 5;
+    // Static mode: 6 sections (Hero status, Selected location, Coordinates, Heading, Options, Actions)
+    return 6;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
@@ -1546,11 +1727,12 @@ static const CGFloat kLSMapHeight = 220.0;
 
     // Static mode row counts
     switch (section) {
-        case 0: return 1; // Preview & Bookmark
-        case 1: return 3; // Latitude, Longitude, Altitude
-        case 2: return 1; // Heading slider
-        case 3: return self.fluctuationSwitch.isOn ? 4 : 3; // Fluctuation, (Radius), Keep Last, Show Real
-        case 4: return [[PersistenceManager shared] isSpoofingEnabled] ? 3 : 2; // Apply, (Stop), Cancel
+        case 0: return 1; // Hero Status Card (Big Active / Inactive indicator & switch)
+        case 1: return 1; // Preview & Bookmark
+        case 2: return 3; // Latitude, Longitude, Altitude
+        case 3: return 1; // Heading slider
+        case 4: return self.fluctuationSwitch.isOn ? 4 : 3; // Fluctuation, (Radius Slider), Keep Last, Show Real
+        case 5: return [[PersistenceManager shared] isSpoofingEnabled] ? 3 : 2; // Apply, (Stop), Cancel
         default: return 0;
     }
 }
@@ -1569,10 +1751,11 @@ static const CGFloat kLSMapHeight = 220.0;
     }
 
     switch (section) {
-        case 0: return @"Selected Location";
-        case 1: return @"Coordinates";
-        case 2: return @"Bearing & Direction";
-        case 3: return @"Spoofing Options";
+        case 0: return @"Status";
+        case 1: return @"Selected Location";
+        case 2: return @"Coordinates";
+        case 3: return @"Bearing & Direction";
+        case 4: return @"Spoofing Options";
         default: return nil;
     }
 }
@@ -1622,17 +1805,20 @@ static const CGFloat kLSMapHeight = 220.0;
     // Static mode: Return retained static cells
     switch (indexPath.section) {
         case 0:
-            return self.previewCell;
+            return self.heroStatusCell;
 
         case 1:
+            return self.previewCell;
+
+        case 2:
             if (indexPath.row == 0) return self.latitudeCell;
             if (indexPath.row == 1) return self.longitudeCell;
             return self.altitudeCell;
 
-        case 2:
+        case 3:
             return self.headingCell;
 
-        case 3: {
+        case 4: {
             if (indexPath.row == 0) return self.fluctuationCell;
             if (self.fluctuationSwitch.isOn) {
                 if (indexPath.row == 1) return self.fluctuationRadiusCell;
@@ -1644,7 +1830,7 @@ static const CGFloat kLSMapHeight = 220.0;
             }
         }
 
-        case 4: {
+        case 5: {
             BOOL isSpoofingActive = [[PersistenceManager shared] isSpoofingEnabled];
             if (indexPath.row == 0) return self.applyButtonCell;
             if (indexPath.row == 1 && isSpoofingActive) return self.stopButtonCell;
@@ -1655,6 +1841,7 @@ static const CGFloat kLSMapHeight = 220.0;
             return [[UITableViewCell alloc] init];
     }
 }
+
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];

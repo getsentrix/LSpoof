@@ -6,8 +6,8 @@
 static NSString * const kLSBookmarksCell = @"LSBookmarksCell";
 
 typedef NS_ENUM(NSInteger, LSBookmarksSection) {
-    LSBookmarksSectionRecents = 0,
-    LSBookmarksSectionSaved = 1
+    LSBookmarksSectionSaved = 0,
+    LSBookmarksSectionRecents = 1
 };
 
 @implementation MapPickerViewController (LSBookmarksUI)
@@ -119,17 +119,17 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
 }
 
 - (NSInteger)ls_bookmarksNumberOfRowsInSection:(NSInteger)section {
-    if (section == LSBookmarksSectionRecents) {
-        return (NSInteger)[PersistenceManager shared].recentLocations.count;
+    if (section == LSBookmarksSectionSaved) {
+        return (NSInteger)[BookmarksManager shared].allBookmarks.count;
     }
-    return (NSInteger)[BookmarksManager shared].allBookmarks.count;
+    return (NSInteger)[PersistenceManager shared].recentLocations.count;
 }
 
 - (nullable NSString *)ls_bookmarksTitleForHeaderInSection:(NSInteger)section {
-    if (section == LSBookmarksSectionRecents) {
-        return @"Recents";
+    if (section == LSBookmarksSectionSaved) {
+        return @"Saved Bookmarks";
     }
-    return @"Saved Bookmarks";
+    return @"Recent Locations";
 }
 
 - (nullable UIView *)ls_bookmarksHeaderForSection:(NSInteger)section {
@@ -179,7 +179,34 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         if (indexPath.row < (NSInteger)recents.count) {
             NSDictionary *entry = recents[indexPath.row];
             coordinate = CLLocationCoordinate2DMake([entry[@"LSRecentLat"] doubleValue], [entry[@"LSRecentLon"] doubleValue]);
-            title = entry[@"LSRecentName"] ?: @"Location";
+            title = entry[@"LSRecentName"];
+            if (title.length == 0 || [title isEqualToString:@"Location"] || [title isEqualToString:@"Resolving address..."]) {
+                CLLocation *loc = [[CLLocation alloc] initWithLatitude:coordinate.latitude longitude:coordinate.longitude];
+                CLGeocoder *geocoder = [[CLGeocoder alloc] init];
+                __weak typeof(self) weakSelf = self;
+                [geocoder reverseGeocodeLocation:loc completionHandler:^(NSArray<CLPlacemark *> *placemarks, NSError *error) {
+                    if (!error && placemarks.count > 0) {
+                        CLPlacemark *pm = placemarks.firstObject;
+                        NSString *resolved = nil;
+                        if (pm.areasOfInterest.firstObject.length > 0) {
+                            resolved = pm.areasOfInterest.firstObject;
+                        } else if (pm.name.length > 0 && pm.thoroughfare.length > 0 && ![pm.name isEqualToString:pm.thoroughfare]) {
+                            resolved = pm.name;
+                        } else if (pm.thoroughfare.length > 0) {
+                            resolved = pm.locality ? [NSString stringWithFormat:@"%@, %@", pm.thoroughfare, pm.locality] : pm.thoroughfare;
+                        } else if (pm.name.length > 0) {
+                            resolved = pm.name;
+                        }
+                        if (resolved.length > 0) {
+                            [[PersistenceManager shared] updateRecentCoordinateName:resolved forCoordinate:coordinate];
+                            dispatch_async(dispatch_get_main_queue(), ^{
+                                [weakSelf.tableView reloadData];
+                            });
+                        }
+                    }
+                }];
+                title = [NSString stringWithFormat:@"%.4f, %.4f", coordinate.latitude, coordinate.longitude];
+            }
         }
 
         UIListContentConfiguration *content = [UIListContentConfiguration subtitleCellConfiguration];
@@ -198,6 +225,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     } else {
         NSArray<LSBookmark *> *bookmarks = [BookmarksManager shared].allBookmarks;
+
         if (indexPath.row < (NSInteger)bookmarks.count) {
             LSBookmark *bookmark = bookmarks[indexPath.row];
             coordinate = bookmark.coordinate;
