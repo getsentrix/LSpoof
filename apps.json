@@ -11,10 +11,10 @@
       "bundleIdentifier": "com.sentrix.lspoof",
       "developerName": "getsentrix",
       "subtitle": "Universal GPS Spoofer for iOS",
-      "version": "1.2.0",
-      "versionDate": "2026-10-01T23:05:31Z",
-      "versionDescription": "LSpoof v1.2.0 - Drift Visualization, 3-Way Theme Sync & Route Snapping",
-      "downloadURL": "https://github.com/getsentrix/LSpoof/releases/download/v1.2.0/LocationSpoofer.dylib",
+      "version": "1.2.2",
+      "versionDate": "2026-10-01T23:55:00Z",
+      "versionDescription": "LSpoof v1.2.2 - Stable Build · Code-Signed for LiveContainer & Sideloading",
+      "downloadURL": "https://github.com/getsentrix/LSpoof/releases/download/v1.2.2/LocationSpoofer.dylib",
       "localizedDescription": "Universal GPS, altitude, and heading spoofer for sideloaded iOS apps. Features draggable pins, real-time route simulation along Apple Maps road networks, randomized GPS drift fluctuation, and a native iOS 16+ Inset Grouped interface.",
       "iconURL": "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png",
       "tintColor": "007AFF",
@@ -26,13 +26,13 @@
   ],
   "news": [
     {
-      "title": "LSpoof v1.2.0 Released",
-      "identifier": "lspoof-release-1.2.0",
-      "caption": "Modern Inset Grouped UI, Apple SF Symbols & Stability Polish",
-      "date": "2026-10-01T23:05:31Z",
+      "title": "LSpoof v1.2.2 Released",
+      "identifier": "lspoof-release-1.2.2",
+      "caption": "Stable release with ad-hoc code signature for LiveContainer, 3-finger gesture & drift overlay",
+      "date": "2026-10-01T23:55:00Z",
       "tintColor": "007AFF",
       "imageURL": "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png",
-      "url": "https://github.com/getsentrix/LSpoof/releases/tag/v1.2.0"
+      "url": "https://github.com/getsentrix/LSpoof/releases/tag/v1.2.2"
     }
   ]
 }

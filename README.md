@@ -18,8 +18,9 @@
 
 ---
 
-## ⚡ What's New in v1.2.1 (Stable Build)
+## ⚡ What's New in v1.2.2 (Stable Build)
 
+- **Ad-Hoc Code Signing Added**: Fixes `missing code signature` error when loading `LocationSpoofer.dylib` via `dlopen()` in LiveContainer / Sideloadly / TrollStore.
 - **3-Finger Hold Gesture Restored**: Hold three fingers anywhere on screen for 0.8s to open the menu.
 - **Drift Radius Visualization**: Live dashed purple circle overlay shows your randomized GPS fluctuation area directly on the map.
 - **System Theme Sync**: 3-way theme selector (System, Light, Dark) matches your iOS appearance.
