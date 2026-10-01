@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>LSpoof — Universal iOS Location Spoofer</title>
+  <meta name="description" content="Precision iOS location spoofing dylib with modern Inset Grouped UI, Apple SF Symbols, and real-time route simulation. No jailbreak required.">
+  <meta name="theme-color" content="#09090b">
+  
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://getsentrix.github.io/LSpoof/">
+  <meta property="og:title" content="LSpoof — Universal iOS Location Spoofer">
+  <meta property="og:description" content="No-jailbreak GPS override dylib with native Inset Grouped UI and LiveContainer support.">
+  <meta property="og:image" content="https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png">
+  
+  <link rel="icon" type="image/png" href="assets/icon.png">
+
+  <style>
+    :root {
+      --bg: #09090b;
+      --bg-card: rgba(18, 18, 22, 0.72);
+      --bg-card-hover: rgba(26, 26, 32, 0.85);
+      --bg-subtle: #18181b;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(255, 255, 255, 0.2);
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --text-subtle: #71717a;
+      --accent: #ffffff;
+      --accent-dim: #27272a;
+      --apple-blue: #0a84ff;
+      --apple-green: #30d158;
+      --apple-red: #ff453a;
+      --apple-orange: #ff9f0a;
+      --apple-purple: #bf5af2;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 32px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06) 0%, transparent 60%),
+        radial-gradient(circle at 100% 40%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    /* Ambient noise & grid lines */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-size: 48px 48px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+      z-index: 0;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header Nav */
+    header {
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(9, 9, 11, 0.82);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      transition: border-color 0.2s;
+    }
+
+    .nav-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand img {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .nav-btn {
+      padding: 8px 16px;
+      border-radius: 9999px;
+      background: #ffffff;
+      color: #000000 !important;
+      font-weight: 600 !important;
+      font-size: 0.85rem !important;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s ease, opacity 0.15s ease !important;
+    }
+
+    .nav-btn:hover {
+      opacity: 0.9;
+      transform: scale(1.02);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 90px 0 60px;
+      text-align: center;
+    }
+
+    .tag-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      backdrop-filter: blur(8px);
+    }
+
+    .tag-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--apple-green);
+      box-shadow: 0 0 10px var(--apple-green);
+      animation: pulse-dot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 40%, #a1a1aa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-p {
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      color: var(--text-muted);
+      max-width: 620px;
+      margin: 0 auto 36px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 50px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 26px;
+      border-radius: var(--radius-md);
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-primary {
+      background: #ffffff;
+      color: #000000;
+    }
+
+    .btn-primary:hover {
+      background: #e4e4e7;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px -10px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      border-color: var(--border);
+      backdrop-filter: blur(10px);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    /* Interactive Showcase Section */
+    .showcase-section {
+      padding: 40px 0 100px;
+    }
+
+    .showcase-wrapper {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    @media (min-width: 960px) {
+      .showcase-wrapper {
+        grid-template-columns: 1.15fr 0.85fr;
+      }
+    }
+
+    /* iPhone Frame Mockup */
+    .phone-container {
+      position: relative;
+      margin: 0 auto;
+      max-width: 400px;
+      width: 100%;
+      background: #000000;
+      border-radius: 54px;
+      padding: 14px;
+      box-shadow: 
+        0 0 0 1px rgba(255, 255, 255, 0.12),
+        0 24px 70px -12px rgba(0, 0, 0, 0.85),
+        0 40px 100px -20px rgba(255, 255, 255, 0.04);
+      border: 4px solid #27272a;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .phone-screen {
+      background: #000000;
+      border-radius: 42px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      position: relative;
+      font-size: 14px;
+      color: #ffffff;
+      min-height: 640px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      width: 110px;
+      height: 28px;
+      background: #000000;
+      border-radius: 20px;
+      margin: 10px auto 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      z-index: 10;
+    }
+
+    .island-cam {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #18181b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .island-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--apple-green);
+    }
+
+    /* Inset Grouped Table Layout inside Phone */
+    .app-sheet {
+      flex: 1;
+      padding: 12px 14px 20px;
+      overflow-y: auto;
+      scrollbar-width: none;
+      background: #000000;
+    }
+    .app-sheet::-webkit-scrollbar { display: none; }
+
+    .app-header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .app-title-group h3 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .app-title-group p {
+      font-size: 0.78rem;
+      color: #8e8e93;
+    }
+
+    .app-close-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #1c1c1e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8e8e93;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* Status Pill */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 69, 58, 0.12);
+      border: 1px solid rgba(255, 69, 58, 0.25);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+
+    .status-pill.active {
+      background: rgba(48, 209, 88, 0.12);
+      border-color: rgba(48, 209, 88, 0.3);
+      color: #30d158;
+    }
+
+    .status-pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Search Bar */
+    .ios-search {
+      background: #1c1c1e;
+      border-radius: 10px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      color: #8e8e93;
+      font-size: 0.8rem;
+      margin-bottom: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Map Widget */
+    .ios-map-container {
+      width: 100%;
+      height: 150px;
+      border-radius: 14px;
+      background: #121214;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 14px;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(10, 132, 255, 0.12) 0%, transparent 70%),
+        linear-gradient(45deg, #18181b 25%, transparent 25%),
+        linear-gradient(-45deg, #18181b 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #18181b 75%),
+        linear-gradient(-45deg, transparent 75%, #18181b 75%);
+      background-size: 100% 100%, 30px 30px, 30px 30px, 30px 30px, 30px 30px;
+      background-position: 0 0, 0 0, 0 15px, 15px -15px, -15px 0px;
+    }
+
+    .map-pin {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -100%);
+      width: 24px;
+      height: 24px;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+      animation: pin-float 2.5s infinite ease-in-out;
+    }
+
+    @keyframes pin-float {
+      0%, 100% { transform: translate(-50%, -100%); }
+      50% { transform: translate(-50%, -115%); }
+    }
+
+    .map-pulse {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(10, 132, 255, 0.25);
+      border: 1px solid rgba(10, 132, 255, 0.6);
+      animation: pulse-ring 2s infinite ease-out;
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: translate(-50%, -50%) scale(0.4); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+    }
+
+    .map-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(28, 28, 30, 0.88);
+      backdrop-filter: blur(6px);
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.65rem;
+      color: #aeaeb2;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      white-space: nowrap;
+    }
+
+    /* iOS Segmented Control */
+    .ios-segment {
+      display: flex;
+      background: #1c1c1e;
+      border-radius: 9px;
+      padding: 2px;
+      margin-bottom: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .ios-segment-btn {
+      flex: 1;
+      padding: 6px 0;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      color: #8e8e93;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .ios-segment-btn.active {
+      background: #636366;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    /* UITableViewStyleInsetGrouped Replica */
+    .inset-group {
+      background: #1c1c1e;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .inset-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      min-height: 44px;
+      transition: background 0.15s;
+    }
+
+    .inset-row:last-child {
+      border-bottom: none;
+    }
+
+    /* SF Symbol Badge */
+    .sf-badge {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .sf-badge svg {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+    }
+
+    .row-title {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #ffffff;
+      width: 90px;
+      flex-shrink: 0;
+    }
+
+    .row-value {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #8e8e93;
+      text-align: right;
+      outline: none;
+      background: transparent;
+      border: none;
+    }
+
+    .row-value:focus {
+      color: #ffffff;
+    }
+
+    /* iOS Switch */
+    .ios-switch {
+      width: 42px;
+      height: 24px;
+      background: #39393d;
+      border-radius: 20px;
+      position: relative;
+      cursor: pointer;
+      margin-left: auto;
+      transition: background 0.25s;
+    }
+
+    .ios-switch.on {
+      background: var(--apple-green);
+    }
+
+    .ios-switch-knob {
+      width: 20px;
+      height: 20px;
+      background: #ffffff;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .ios-switch.on .ios-switch-knob {
+      transform: translateX(18px);
+    }
+
+    /* Collapsible radius row */
+    .radius-row {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+      padding: 0 14px;
+      border-bottom: none;
+    }
+
+    .radius-row.show {
+      max-height: 50px;
+      opacity: 1;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* Buttons inside phone */
+    .ios-btn-primary {
+      width: 100%;
+      height: 44px;
+      background: var(--apple-blue);
+      color: #ffffff;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.15s;
+    }
+
+    .ios-btn-primary:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+
+    .ios-btn-stop {
+      width: 100%;
+      height: 44px;
+      background: rgba(255, 69, 58, 0.15);
+      color: var(--apple-red);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 69, 58, 0.3);
+      font-weight: 600;
+      font-size: 0.88rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    /* Showcase Text & Controls Column */
+    .showcase-info h2 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .showcase-info p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 28px;
+    }
+
+    .interactive-pills {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .feature-pill {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .feature-pill:hover, .feature-pill.active {
+      background: var(--bg-card-hover);
+      border-color: var(--border-hover);
+      transform: translateX(4px);
+    }
+
+    .feature-pill.active {
+      border-left: 3px solid #ffffff;
+    }
+
+    .pill-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .pill-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .pill-tag {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      color: var(--text-muted);
+    }
+
+    .pill-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    /* AltStore / LiveContainer Hero Card */
+    .source-card {
+      margin: 40px 0 80px;
+      background: linear-gradient(135deg, rgba(24, 24, 27, 0.85) 0%, rgba(12, 12, 14, 0.95) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-xl);
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.7);
+    }
+
+    .source-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .source-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .source-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .source-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #000000;
+    }
+
+    .source-title-wrap h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .source-title-wrap p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .source-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* Copy URL Box */
+    .url-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      color: var(--text);
+      margin-bottom: 30px;
+      gap: 12px;
+    }
+
+    .url-text {
+      overflow-x: auto;
+      white-space: nowrap;
+      color: #e4e4e7;
+      scrollbar-width: none;
+    }
+    .url-text::-webkit-scrollbar { display: none; }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .copy-btn:hover {
+      background: #ffffff;
+      color: #000000;
+    }
+
+    /* LiveContainer 3-step pills */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .step-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+    }
+
+    .step-number {
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--text-subtle);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .step-card h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .step-card p {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Bento Features Grid */
+    .features-section {
+      padding: 60px 0 100px;
+    }
+
+    .section-head {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 50px;
+    }
+
+    .section-head h2 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+
+    .section-head p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 20px;
+    }
+
+    .bento-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bento-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-3px);
+    }
+
+    .col-8 { grid-column: span 12; }
+    .col-4 { grid-column: span 12; }
+    .col-6 { grid-column: span 12; }
+
+    @media (min-width: 768px) {
+      .col-8 { grid-column: span 8; }
+      .col-4 { grid-column: span 4; }
+      .col-6 { grid-column: span 6; }
+    }
+
+    .bento-icon-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .bento-card h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .bento-card p {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Scroll-driven animations compliance */
+    @media (prefers-reduced-motion: no-preference) {
+      @supports ((animation-timeline: view()) and (animation-range: entry)) {
+        @keyframes scroll-reveal {
+          from {
+            opacity: 0;
+            transform: translateY(24px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .bento-card, .source-card, .phone-container {
+          animation: scroll-reveal auto linear backwards;
+          animation-timeline: view();
+          animation-range: entry 5% cover 25%;
+        }
+      }
+    }
+
+    /* Fallback for browsers without CSS scroll-timeline */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Terminal Quickstart */
+    .terminal-section {
+      padding: 40px 0 100px;
+    }
+
+    .terminal-card {
+      background: #000000;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      font-family: var(--font-mono);
+    }
+
+    .terminal-top {
+      background: #121214;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .term-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .term-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #27272a;
+    }
+
+    .terminal-body {
+      padding: 24px;
+      font-size: 0.86rem;
+      line-height: 1.8;
+      color: #d4d4d8;
+      overflow-x: auto;
+    }
+
+    .term-prompt {
+      color: #71717a;
+      user-select: none;
+    }
+
+    .term-cmd {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-subtle);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    footer a:hover {
+      color: var(--text);
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #ffffff;
+      color: #000000;
+      padding: 10px 20px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 1000;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="container nav-wrap">
+      <a href="#" class="brand">
+        <img src="assets/icon.png" alt="LSpoof logo">
+        <span>LSpoof</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#showcase">UI Showcase</a></li>
+        <li><a href="#altstore">AltStore & LiveContainer</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="https://github.com/getsentrix/LSpoof" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/getsentrix/LSpoof/releases/latest" class="nav-btn">Download v1.1.1</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <main>
+    <section class="hero container">
+      <div class="tag-badge">
+        <span class="tag-dot"></span>
+        <span>LSpoof v1.1.1 Released · Inset Grouped UI & Apple SF Symbols</span>
+      </div>
+      <h1>Universal Location Spoofer for iOS.</h1>
+      <p class="hero-p">
+        Override GPS coordinates in any sideloaded iOS app. Features native Inset Grouped UI, real-time route simulation, and zero-glitch retained inputs. No jailbreak required.
+      </p>
+      <div class="hero-actions">
+        <a href="#altstore" class="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Add to LiveContainer / AltStore
+        </a>
+        <a href="https://github.com/getsentrix/LSpoof/releases/latest" class="btn btn-secondary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download LocationSpoofer.dylib
+        </a>
+      </div>
+    </section>
+
+    <!-- Interactive Showcase Section -->
+    <section id="showcase" class="showcase-section container">
+      <div class="showcase-wrapper">
+        
+        <!-- iPhone Simulator -->
+        <div class="phone-container">
+          <div class="phone-screen">
+            <!-- Dynamic Island -->
+            <div class="dynamic-island">
+              <div class="island-cam"></div>
+              <div class="island-dot"></div>
+            </div>
+
+            <!-- Inset Grouped App Sheet -->
+            <div class="app-sheet">
+              <div class="app-header-row">
+                <div class="app-title-group">
+                  <h3>Location Spoofer</h3>
+                  <p>Choose where apps think you are</p>
+                </div>
+                <button class="app-close-btn" title="Close">✕</button>
+              </div>
+
+              <!-- Interactive Status Pill -->
+              <div class="status-pill active" id="demoStatusPill">
+                <span class="status-pill-dot"></span>
+                <span id="demoStatusText">Spoofing active · 37.7749° N, -122.4194° W</span>
+              </div>
+
+              <!-- Search Bar -->
+              <div class="ios-search">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span>Search city, address, or landmark</span>
+              </div>
+
+              <!-- Interactive Map Widget -->
+              <div class="ios-map-container" id="demoMap">
+                <div class="map-pulse"></div>
+                <!-- Pin icon -->
+                <svg class="map-pin" viewBox="0 0 24 24" fill="#ff3b30"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+                <div class="map-hint">Tap map or drag pin</div>
+              </div>
+
+              <!-- Segmented Switcher: Static | Route | Bookmarks -->
+              <div class="ios-segment">
+                <button class="ios-segment-btn active" onclick="switchPhoneTab('static')">Static</button>
+                <button class="ios-segment-btn" onclick="switchPhoneTab('route')">Route</button>
+                <button class="ios-segment-btn" onclick="switchPhoneTab('bookmarks')">Bookmarks</button>
+              </div>
+
+              <!-- Static Mode Content -->
+              <div id="phoneTabStatic">
+                <!-- Group 1: Coordinates -->
+                <div class="inset-group">
+                  <div class="inset-row">
+                    <div class="sf-badge" style="background: var(--apple-blue);">
+                      <svg viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                    </div>
+                    <span class="row-title">Latitude</span>
+                    <input class="row-value" id="demoLat" value="37.774900" spellcheck="false">
+                  </div>
+                  <div class="inset-row">
+                    <div class="sf-badge" style="background: #30b0c7;">
+                      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1a2 2 0 0 0 2 2v1.93zm6.9-2.54A8 8 0 0 0 18 12c0-.36-.03-.7-.08-1.04l-4.92 4.92v.12a2 2 0 0 0 2 2h1.5a1.5 1.5 0 0 0 1.5-1.5v-1.11z"/></svg>
+                    </div>
+                    <span class="row-title">Longitude</span>
+                    <input class="row-value" id="demoLon" value="-122.419400" spellcheck="false">
+                  </div>
+                  <div class="inset-row">
+                    <div class="sf-badge" style="background: var(--apple-orange);">
+                      <svg viewBox="0 0 24 24"><path d="M14 6l-3.75 5 2.85 3.8L11.5 16 7 10 1 18h22z"/></svg>
+                    </div>
+                    <span class="row-title">Altitude</span>
+                    <input class="row-value" id="demoAlt" value="12 m" spellcheck="false">
+                  </div>
+                  <div class="inset-row">
+                    <div class="sf-badge" style="background: var(--apple-purple);">
+                      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.93V14h-2v2.93a8 8 0 0 1-5.93-5.93H8v-2H5.07A8 8 0 0 1 11 5.07V8h2V5.07a8 8 0 0 1 5.93 5.93H16v2h2.93a8 8 0 0 1-5.93 5.93z"/></svg>
+                    </div>
+                    <span class="row-title">Heading</span>
+                    <span class="row-value" id="demoHeadingValue">124° SE</span>
+                  </div>
+                </div>
+
+                <!-- Group 2: Fluctuation & Options -->
+                <div class="inset-group">
+                  <div class="inset-row" onclick="toggleDemoFluctuation()">
+                    <div class="sf-badge" style="background: var(--apple-purple);">
+                      <svg viewBox="0 0 24 24"><path d="M3 17h2v-4H3v4zm4 4h2V7H7v14zm4-12h2V3h-2v6zm4 8h2v-7h-2v7zm4 4h2v-9h-2v9z"/></svg>
+                    </div>
+                    <span class="row-title" style="width: 140px;">Drift Fluctuation</span>
+                    <div class="ios-switch on" id="demoSwitchFluct">
+                      <div class="ios-switch-knob"></div>
+                    </div>
+                  </div>
+                  <div class="inset-row radius-row show" id="demoRadiusRow">
+                    <div class="sf-badge" style="background: rgba(191, 90, 242, 0.6);">
+                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#ffffff" stroke-width="2" fill="none" stroke-dasharray="4 3"/></svg>
+                    </div>
+                    <span class="row-title">Radius</span>
+                    <input class="row-value" value="50 m" spellcheck="false">
+                  </div>
+                  <div class="inset-row" onclick="toggleDemoSwitch('demoSwitchKeep')">
+                    <div class="sf-badge" style="background: var(--apple-green);">
+                      <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                    </div>
+                    <span class="row-title" style="width: 140px;">Keep Last Spoof</span>
+                    <div class="ios-switch on" id="demoSwitchKeep">
+                      <div class="ios-switch-knob"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <button class="ios-btn-primary" onclick="simulateApply()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+                  Apply Location
+                </button>
+                <button class="ios-btn-stop" onclick="simulateStop()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
+                  Stop Spoofing
+                </button>
+              </div>
+
+              <!-- Route Mode Content (Hidden initially) -->
+              <div id="phoneTabRoute" style="display: none;">
+                <div class="inset-group">
+                  <div class="inset-row">
+                    <div class="sf-badge" style="background: var(--apple-green);">
+                      <svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+                    </div>
+                    <span class="row-title">Start Point</span>
+                    <span class="row-value">San Francisco, CA</span>
+                  </div>
+                  <div class="inset-row">
+                    <div class="sf-badge" style="background: var(--apple-red);">
+                      <svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+                    </div>
+                    <span class="row-title">Destination</span>
+                    <span class="row-value">Cupertino, CA</span>
+                  </div>
+                  <div class="inset-row">
+                    <div class="sf-badge" style="background: var(--apple-orange);">
+                      <svg viewBox="0 0 24 24"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 12 4a7.92 7.92 0 0 1 5.74 2.44L16.4 7.78A5.95 5.95 0 0 0 12 6a6 6 0 0 0-6 6c0 2.22 1.2 4.15 3 5.19V15h2v-3.5a1.5 1.5 0 1 1 2 1.41V15h2v2.19a5.96 5.96 0 0 0 3-4.19z"/></svg>
+                    </div>
+                    <span class="row-title">Mode</span>
+                    <span class="row-value">Drive (50 km/h)</span>
+                  </div>
+                </div>
+                <button class="ios-btn-primary" style="background: var(--apple-green);" onclick="simulateRoutePlay()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  Start Simulation
+                </button>
+              </div>
+
+              <!-- Bookmarks Mode Content (Hidden initially) -->
+              <div id="phoneTabBookmarks" style="display: none;">
+                <div class="inset-group">
+                  <div class="inset-row">
+                    <div class="sf-badge" style="background: #eab308;">
+                      <svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+                    </div>
+                    <div style="flex: 1;">
+                      <div style="font-size: 0.85rem; font-weight: 600;">Apple Park</div>
+                      <div style="font-size: 0.72rem; color: #8e8e93;">37.3349, -122.0090</div>
+                    </div>
+                    <button style="padding: 4px 10px; border-radius: 6px; background: #2c2c2e; border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 0.75rem; cursor: pointer;">Apply</button>
+                  </div>
+                  <div class="inset-row">
+                    <div class="sf-badge" style="background: #eab308;">
+                      <svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+                    </div>
+                    <div style="flex: 1;">
+                      <div style="font-size: 0.85rem; font-weight: 600;">Tokyo Tower</div>
+                      <div style="font-size: 0.72rem; color: #8e8e93;">35.6586, 139.7454</div>
+                    </div>
+                    <button style="padding: 4px 10px; border-radius: 6px; background: #2c2c2e; border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 0.75rem; cursor: pointer;">Apply</button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Explanatory Controls -->
+        <div class="showcase-info">
+          <h2>Pixel-Perfect Native iOS Architecture.</h2>
+          <p>
+            Re-engineered from the ground up for iOS 16+. Zero UI glitches, continuous corner squircle curves, and native system SF Symbols that match Apple dark mode effortlessly.
+          </p>
+
+          <div class="interactive-pills">
+            <div class="feature-pill active" onclick="switchPhoneTab('static')">
+              <div class="pill-header">
+                <span class="pill-title">UITableViewStyleInsetGrouped</span>
+                <span class="pill-tag">Section 0-4</span>
+              </div>
+              <div class="pill-desc">
+                Retained static cells ensure you can type decimal coordinates without keyboard dismiss interruptions or cursor resets.
+              </div>
+            </div>
+
+            <div class="feature-pill" onclick="switchPhoneTab('route')">
+              <div class="pill-header">
+                <span class="pill-title">Route Simulation Engine</span>
+                <span class="pill-tag">0.1s Tick</span>
+              </div>
+              <div class="pill-desc">
+                Real-time Apple Maps directions interpolation with speed profiles (walk, cycle, drive, custom) and turn-by-turn dynamic heading calculation.
+              </div>
+            </div>
+
+            <div class="feature-pill" onclick="toggleDemoFluctuation()">
+              <div class="pill-header">
+                <span class="pill-title">Randomized GPS Drift</span>
+                <span class="pill-tag">Batch Updates</span>
+              </div>
+              <div class="pill-desc">
+                Smooth animated row insertions/deletions when toggling micro-movements to bypass strict anti-spoof telemetry checks.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- AltStore & LiveContainer Source Card -->
+    <section id="altstore" class="container">
+      <div class="source-card">
+        <div class="source-header">
+          <div class="source-title-wrap">
+            <img src="assets/icon.png" alt="AltStore Repo Icon" class="source-icon">
+            <div>
+              <h2>AltStore & LiveContainer Source</h2>
+              <p>Automatically tracks releases and pushes compiled dylib updates</p>
+            </div>
+          </div>
+          <div class="source-actions">
+            <a href="altstore://source?url=https%3A%2F%2Fgetsentrix.github.io%2FLSpoof%2Fapps.json" class="btn btn-primary">
+              Add to AltStore
+            </a>
+            <a href="sidestore://source?url=https%3A%2F%2Fgetsentrix.github.io%2FLSpoof%2Fapps.json" class="btn btn-secondary">
+              Add to SideStore
+            </a>
+          </div>
+        </div>
+
+        <!-- Copy URL Box -->
+        <div class="url-box">
+          <span class="url-text" id="sourceUrl">https://getsentrix.github.io/LSpoof/apps.json</span>
+          <button class="copy-btn" onclick="copySourceUrl()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy Source URL</span>
+          </button>
+        </div>
+
+        <!-- 3-Step LiveContainer Instructions -->
+        <div class="steps-grid">
+          <div class="step-card">
+            <span class="step-number">STEP 01</span>
+            <h4>Copy Source URL</h4>
+            <p>Click "Copy Source URL" above or copy <code>apps.json</code> link directly to your clipboard.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">STEP 02</span>
+            <h4>Open LiveContainer</h4>
+            <p>Go to <strong>LiveContainer</strong> → <strong>Tweaks & Sources</strong> → tap <strong>+ Add Source</strong> and paste the link.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">STEP 03</span>
+            <h4>Inject & Enjoy</h4>
+            <p>Enable <code>LocationSpoofer.dylib</code> on your target app. Hold 3 fingers for 0.8s inside the app to open the picker.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bento Features Section -->
+    <section id="features" class="features-section container">
+      <div class="section-head">
+        <h2>Engineering Highlights</h2>
+        <p>Built for stability, safety, and seamless day-to-day spoofing.</p>
+      </div>
+
+      <div class="bento-grid">
+        <!-- Card 1 -->
+        <div class="bento-card col-8">
+          <div class="bento-icon-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+          </div>
+          <div>
+            <h3>Mach-O Swizzling & CLLocation Injection</h3>
+            <p>Injected dynamically into iOS IPAs via <code>LC_LOAD_DYLIB</code>. Hooks both asynchronous <code>CLLocationManagerDelegate</code> callbacks and synchronous <code>[CLLocationManager location]</code> queries with zero memory leaks.</p>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="bento-card col-4">
+          <div class="bento-icon-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1a2 2 0 0 0 2 2v1.93zm6.9-2.54A8 8 0 0 0 18 12c0-.36-.03-.7-.08-1.04l-4.92 4.92v.12a2 2 0 0 0 2 2h1.5a1.5 1.5 0 0 0 1.5-1.5v-1.11z"/></svg>
+          </div>
+          <div>
+            <h3>Retained Static Cells</h3>
+            <p>Prevents view re-parenting and keyboard focus loss when typing negative coordinates or decimal points.</p>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="bento-card col-4">
+          <div class="bento-icon-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+          </div>
+          <div>
+            <h3>Apple SF Symbol Badges</h3>
+            <p>Native icon badges styled after iOS Settings with continuous corner squircle curves and high-contrast iconography.</p>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="bento-card col-4">
+          <div class="bento-icon-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+          </div>
+          <div>
+            <h3>Zero Gesture Conflicts</h3>
+            <p>3-finger 0.8s activation gesture automatically pauses when the map sheet is presented, letting you pinch, pan, and zoom without accidental triggers.</p>
+          </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="bento-card col-4">
+          <div class="bento-icon-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+          </div>
+          <div>
+            <h3>Continuous Auto Updates</h3>
+            <p>GitHub Actions CI automatically compiles arm64 Mach-O binaries on macOS and regenerates the AltStore repository JSON on every release.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Terminal Quickstart Section -->
+    <section class="terminal-section container">
+      <div class="terminal-card">
+        <div class="terminal-top">
+          <div class="term-dots">
+            <div class="term-dot"></div>
+            <div class="term-dot"></div>
+            <div class="term-dot"></div>
+          </div>
+          <span style="font-size: 0.78rem; color: #71717a;">quickstart.sh</span>
+          <button class="copy-btn" onclick="copyTerminalCmd()">Copy</button>
+        </div>
+        <div class="terminal-body" id="termCmd">
+          <span class="term-prompt"># 1. Download compiled LocationSpoofer.dylib (v1.1.1)</span><br>
+          <span class="term-cmd">gh release download v1.1.1 --repo getsentrix/LSpoof --pattern "*.dylib"</span><br><br>
+          <span class="term-prompt"># 2. Or download via direct curl:</span><br>
+          <span class="term-cmd">curl -LO https://github.com/getsentrix/LSpoof/releases/download/v1.1.1/LocationSpoofer.dylib</span><br><br>
+          <span class="term-prompt"># 3. Inject into target IPA using Azule or Sideloadly</span><br>
+          <span class="term-cmd">azule -i TargetApp.ipa -o SpoofedApp.ipa -f LocationSpoofer.dylib</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>
+        Maintained by <a href="https://github.com/getsentrix" target="_blank" rel="noopener">getsentrix</a>. Source code available under MIT License on <a href="https://github.com/getsentrix/LSpoof" target="_blank" rel="noopener">GitHub</a>.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Toast Element -->
+  <div class="toast" id="toast">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#30d158"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+    <span id="toastMsg">Source URL copied to clipboard!</span>
+  </div>
+
+  <script>
+    // Copy AltStore URL
+    function copySourceUrl() {
+      const url = document.getElementById('sourceUrl').innerText;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast("AltStore / LiveContainer source URL copied!");
+      });
+    }
+
+    // Copy Terminal commands
+    function copyTerminalCmd() {
+      const cmd = "gh release download v1.1.1 --repo getsentrix/LSpoof --pattern \"*.dylib\"";
+      navigator.clipboard.writeText(cmd).then(() => {
+        showToast("Download command copied!");
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // Switch Phone Tabs in Interactive Demo
+    function switchPhoneTab(tab) {
+      const staticDiv = document.getElementById('phoneTabStatic');
+      const routeDiv = document.getElementById('phoneTabRoute');
+      const bmarksDiv = document.getElementById('phoneTabBookmarks');
+      const btns = document.querySelectorAll('.ios-segment-btn');
+
+      btns.forEach(b => b.classList.remove('active'));
+
+      if (tab === 'static') {
+        btns[0].classList.add('active');
+        staticDiv.style.display = 'block';
+        routeDiv.style.display = 'none';
+        bmarksDiv.style.display = 'none';
+      } else if (tab === 'route') {
+        btns[1].classList.add('active');
+        staticDiv.style.display = 'none';
+        routeDiv.style.display = 'block';
+        bmarksDiv.style.display = 'none';
+      } else {
+        btns[2].classList.add('active');
+        staticDiv.style.display = 'none';
+        routeDiv.style.display = 'none';
+        bmarksDiv.style.display = 'block';
+      }
+    }
+
+    // Interactive Demo Toggles
+    function toggleDemoFluctuation() {
+      const sw = document.getElementById('demoSwitchFluct');
+      const row = document.getElementById('demoRadiusRow');
+      sw.classList.toggle('on');
+      row.classList.toggle('show');
+    }
+
+    function toggleDemoSwitch(id) {
+      const sw = document.getElementById(id);
+      sw.classList.toggle('on');
+    }
+
+    function simulateApply() {
+      const pill = document.getElementById('demoStatusPill');
+      const text = document.getElementById('demoStatusText');
+      const lat = document.getElementById('demoLat').value;
+      const lon = document.getElementById('demoLon').value;
+
+      pill.classList.add('active');
+      text.innerText = `Spoofing active · ${lat}° N, ${lon}° W`;
+      showToast("Coordinate applied! Haptic triggered.");
+    }
+
+    function simulateStop() {
+      const pill = document.getElementById('demoStatusPill');
+      const text = document.getElementById('demoStatusText');
+      pill.classList.remove('active');
+      text.innerText = "Spoofing inactive";
+      showToast("Spoofing stopped. Native GPS restored.");
+    }
+
+    function simulateRoutePlay() {
+      showToast("Route simulation running along Apple Maps road network!");
+    }
+
+    // Modern Web Guidance: IntersectionObserver fallback for scroll reveal animations
+    if (!CSS.supports('(animation-timeline: view()) and (animation-range: entry)')) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.bento-card, .source-card, .phone-container').forEach(el => {
+        el.classList.add('fade-up');
+        observer.observe(el);
+      });
+    }
+  </script>
+</body>
+</html>

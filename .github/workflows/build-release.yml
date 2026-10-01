@@ -92,3 +92,17 @@ jobs:
               --title "v1.1.1 - Inset Grouped UI Polish, Glitch Fixes & Apple SF Symbols" \
               --notes-file notes.md
           }
+
+      - name: Update AltStore Source
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/update_altstore.py
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/apps.json apps.json
+          git diff --quiet && git diff --staged --quiet || {
+            git commit -m "chore(altstore): auto-update apps.json repository source"
+            git push origin HEAD:main
+          }
+
