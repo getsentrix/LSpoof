@@ -105,6 +105,7 @@ jobs:
           git add docs/apps.json apps.json
           git diff --quiet && git diff --staged --quiet || {
             git commit -m "chore(altstore): auto-update apps.json repository source"
-            git push origin HEAD:main
+            git pull --rebase origin main || true
+            git push origin HEAD:main || true
           }
 
