@@ -4,6 +4,7 @@
 #import "OverlayWindow.h"
 #import "PersistenceManager.h"
 #import "RouteSimulator.h"
+#import "LSUpdateChecker.h"
 
 #import <CoreLocation/CoreLocation.h>
 #import <MapKit/MapKit.h>
@@ -105,6 +106,7 @@ static const CGFloat kLSMapHeight = 220.0;
     [super viewDidAppear:animated];
     LSSetHooksBypassed(YES);
     [self configureMapIfNeeded];
+    [LSUpdateChecker checkForUpdatesAutomatically];
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -191,6 +193,22 @@ static const CGFloat kLSMapHeight = 220.0;
 
     [self buildHeaderAndMap];
     [self buildControls];
+
+    UIView *tableFooter = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 54.0)];
+    UIButton *updateButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    updateButton.translatesAutoresizingMaskIntoConstraints = NO;
+    updateButton.titleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium];
+    [updateButton setTitle:[NSString stringWithFormat:@"LSpoof v%@ · Check for Updates", [LSUpdateChecker currentVersion]] forState:UIControlStateNormal];
+    [updateButton setTitleColor:UIColor.secondaryLabelColor forState:UIControlStateNormal];
+    [updateButton addTarget:self action:@selector(handleCheckForUpdatesTapped) forControlEvents:UIControlEventTouchUpInside];
+    [tableFooter addSubview:updateButton];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [updateButton.centerXAnchor constraintEqualToAnchor:tableFooter.centerXAnchor],
+        [updateButton.centerYAnchor constraintEqualToAnchor:tableFooter.centerYAnchor],
+        [updateButton.heightAnchor constraintEqualToConstant:36.0]
+    ]];
+    self.tableView.tableFooterView = tableFooter;
 }
 
 - (void)buildHeaderAndMap {
@@ -1166,6 +1184,10 @@ static const CGFloat kLSMapHeight = 220.0;
     double radius = round(sender.value);
     self.fluctuationRadiusLabel.text = [NSString stringWithFormat:@"%.0f m", radius];
     [PersistenceManager shared].fluctuationRadius = radius;
+}
+
+- (void)handleCheckForUpdatesTapped {
+    [LSUpdateChecker checkForUpdatesManuallyFromViewController:self];
 }
 
 - (void)updateHeroStatusCell {

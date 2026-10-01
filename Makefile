@@ -15,7 +15,8 @@ LocationSpoofer_FILES = \
 	Source/MapPickerViewController.m \
 	Source/MapPickerViewController+Route.m \
 	Source/MapPickerViewController+Bookmarks.m \
-	Source/PersistenceManager.m
+	Source/PersistenceManager.m \
+	Source/LSUpdateChecker.m
 
 LocationSpoofer_CFLAGS = -fobjc-arc -Wall -Wextra -ISource
 LocationSpoofer_FRAMEWORKS = Foundation UIKit CoreLocation MapKit CoreGraphics QuartzCore

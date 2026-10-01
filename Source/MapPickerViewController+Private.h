@@ -163,6 +163,7 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 - (void)updateHeroStatusCell;
 - (void)handleHeroStatusSwitchToggled:(UISwitch *)sender;
 - (void)handleFluctuationRadiusSliderChanged:(UISlider *)sender;
+- (void)handleCheckForUpdatesTapped;
 - (void)ls_updateTableHeaderLayout;
 
 @end

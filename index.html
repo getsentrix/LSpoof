@@ -885,23 +885,23 @@
     <section class="hero container">
       <div class="tag-badge">
         <span class="tag-dot"></span>
-        <span>Version 1.1.2 · Automatic Current Location & Quick Switch</span>
+        <span>Version 1.1.3 · In-App Auto Update Checker & Dynamic UI</span>
       </div>
       <h1>Change Your iPhone GPS Location.</h1>
       <p class="hero-p">
-        Override location in any sideloaded app — Pokémon GO, Tinder, Life360, Find My, and more. Simple menu, real-time map, and route simulation. No jailbreak required.
+        Override location in any sideloaded app — Pokémon GO, Tinder, Life360, Find My, and more. Native iOS menu, real-time map, drift slider, and automatic update alerts. No jailbreak required.
       </p>
       <div class="hero-actions">
-        <!-- Main button: SideStore -->
-        <a href="sidestore://source?url=https%3A%2F%2Fgetsentrix.github.io%2FLSpoof%2Fapps.json" class="btn btn-primary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Add to SideStore
+        <!-- Main button: Download Dylib -->
+        <a href="https://github.com/getsentrix/LSpoof/releases/latest" class="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download LocationSpoofer.dylib
         </a>
-        <!-- Secondary button: LiveContainer -->
-        <button onclick="copySourceUrl()" class="btn btn-secondary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Add to LiveContainer
-        </button>
+        <!-- Secondary button: Install Guide -->
+        <a href="#install" class="btn btn-secondary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Sideload Guide (LiveContainer)
+        </a>
       </div>
     </section>
 
@@ -1088,6 +1088,9 @@
                     </div>
                   </div>
                 </div>
+              <!-- Version & Update Check Footer -->
+              <div style="text-align: center; margin: 14px 0 4px;">
+                <button onclick="showToast('LSpoof is up to date (v1.1.3)')" style="background: none; border: none; font-size: 0.72rem; color: #8e8e93; cursor: pointer; text-decoration: underline;">LSpoof v1.1.3 · Check for Updates</button>
               </div>
 
             </div>
@@ -1098,7 +1101,7 @@
         <div class="showcase-info">
           <h2>Simple, Clean, and Easy to Use.</h2>
           <p>
-            No complex menus or confusing setup. Opens directly inside your app and feels just like iOS Settings.
+            No complex menus or confusing setup. Opens directly inside your app and feels just like native iOS Settings.
           </p>
 
           <div class="feature-list">
@@ -1121,62 +1124,53 @@
               <h4>Quick Drift Slider</h4>
               <p>Drag a simple slider from 5m to 150m to add natural GPS drift so games don't flag your position.</p>
             </div>
+
+            <div class="feature-item" onclick="showToast('Auto update checker runs on launch')">
+              <h4>In-App Update Checker</h4>
+              <p>The dylib checks GitHub Releases on launch and alerts you on screen whenever a new update is out.</p>
+            </div>
           </div>
         </div>
 
       </div>
     </section>
 
-    <!-- Source Installation Card -->
+    <!-- Installation Card -->
     <section id="install" class="container">
       <div class="source-card">
         <div class="source-top">
           <div class="source-brand">
             <img src="assets/icon.png" alt="LSpoof Source Icon">
             <div>
-              <h3>Add to Your Sideloading App</h3>
-              <p>Always receive new updates automatically</p>
+              <h3>How to Install</h3>
+              <p>Inject into any sideloaded iOS app — no jailbreak needed</p>
             </div>
           </div>
           <div class="source-buttons">
-            <!-- Main button: SideStore -->
-            <a href="sidestore://source?url=https%3A%2F%2Fgetsentrix.github.io%2FLSpoof%2Fapps.json" class="btn btn-primary">
-              Add to SideStore
+            <a href="https://github.com/getsentrix/LSpoof/releases/latest" class="btn btn-primary">
+              Download Latest .dylib
             </a>
-            <!-- Secondary: LiveContainer -->
-            <button onclick="copySourceUrl()" class="btn btn-secondary">
-              Add to LiveContainer
-            </button>
-            <!-- Tertiary: AltStore -->
-            <a href="altstore://source?url=https%3A%2F%2Fgetsentrix.github.io%2FLSpoof%2Fapps.json" class="btn btn-secondary" style="font-size: 0.8rem; padding: 13px 16px;">
-              AltStore
+            <a href="https://github.com/getsentrix/LSpoof" target="_blank" rel="noopener" class="btn btn-secondary">
+              GitHub Repo
             </a>
           </div>
-        </div>
-
-        <div class="url-box">
-          <span class="url-text" id="sourceUrl">https://getsentrix.github.io/LSpoof/apps.json</span>
-          <button class="copy-btn" onclick="copySourceUrl()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            <span>Copy URL</span>
-          </button>
         </div>
 
         <div class="steps-grid">
           <div class="step-box">
-            <span class="step-num">STEP 1</span>
-            <h5>Add Source</h5>
-            <p>Tap <strong>Add to SideStore</strong> or copy the URL into LiveContainer's Sources tab.</p>
+            <span class="step-num">STEP 1 · DOWNLOAD</span>
+            <h5>Get the Dylib</h5>
+            <p>Download <code>LocationSpoofer.dylib</code> from GitHub Releases directly to your iPhone or computer.</p>
           </div>
           <div class="step-box">
-            <span class="step-num">STEP 2</span>
-            <h5>Enable Tweak</h5>
-            <p>Turn on <code>LocationSpoofer.dylib</code> for the target app you want to spoof.</p>
+            <span class="step-num">STEP 2 · INJECT</span>
+            <h5>LiveContainer or Sideloadly</h5>
+            <p>In <strong>LiveContainer</strong>, place the dylib in your Tweaks folder and turn it on. In <strong>Sideloadly</strong>, inject via Advanced Options.</p>
           </div>
           <div class="step-box">
-            <span class="step-num">STEP 3</span>
-            <h5>Open Menu</h5>
-            <p>In the app, hold 3 fingers anywhere on the screen for 0.8s to pick your location.</p>
+            <span class="step-num">STEP 3 · AUTO-UPDATE</span>
+            <h5>Built-in Update Alerts</h5>
+            <p>Whenever a new version is released on GitHub, a popup will appear in your app with a 1-tap download prompt.</p>
           </div>
         </div>
       </div>
@@ -1198,8 +1192,8 @@
           <p>Adds subtle randomized drift around your spot so apps see normal GPS behavior.</p>
         </div>
         <div class="feature-card">
-          <h3>Saved Bookmarks</h3>
-          <p>Keep your most-used locations saved and jump between them with a single tap.</p>
+          <h3>In-App Update Alerts</h3>
+          <p>Automatic background checks alert you on-screen whenever a new dylib is available on GitHub.</p>
         </div>
       </div>
     </section>

@@ -2,6 +2,7 @@
 #import "LocationSpoofer.h"
 #import "MapPickerViewController.h"
 #import "LSHooking.h"
+#import "LSUpdateChecker.h"
 
 #import <objc/runtime.h>
 #import <os/log.h>
@@ -281,6 +282,9 @@ static UIViewController *LSHostTopViewController(void) {
 - (void)handleApplicationDidBecomeActive:(NSNotification *)notification {
     (void)notification;
     [LSOverlayManager installSendEventHooks];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [LSUpdateChecker checkForUpdatesAutomatically];
+    });
 }
 
 - (void)handleApplicationDidEnterBackground:(NSNotification *)notification {

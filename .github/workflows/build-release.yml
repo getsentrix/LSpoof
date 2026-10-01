@@ -40,6 +40,7 @@ jobs:
             Source/MapPickerViewController+Route.m \
             Source/MapPickerViewController+Bookmarks.m \
             Source/PersistenceManager.m \
+            Source/LSUpdateChecker.m \
             -framework Foundation \
             -framework UIKit \
             -framework CoreLocation \
@@ -65,20 +66,21 @@ jobs:
             if [[ "${{ github.ref }}" == refs/tags/* ]]; then
               TAG="${GITHUB_REF#refs/tags/}"
             else
-              TAG="v1.1.2"
+              TAG="v1.1.3"
             fi
           fi
           echo "Using tag: $TAG"
           cat << 'EOF' > notes.md
-          ## LSpoof v1.1.2 - Hero Status Indicator, Current Location & Drift Slider
+          ## LSpoof v1.1.3 - In-App Auto Update Checker & Dylib Notification
 
           ### What's New
+          - **In-App Auto Update Checker**: Dylib automatically checks GitHub Releases in the background and presents an alert popup whenever a new version is available, with a direct 1-tap download link.
+          - **Manual Update Check**: Added interactive "LSpoof v1.1.3 · Check for Updates" button at the bottom of the spoofer menu.
           - **Auto Current Location**: Map preview automatically centers on physical device GPS location on launch instead of default California coordinates.
-          - **Prominent Status Indicator**: Section 0 hero card with 16pt status indicator dot and instant Active/Inactive toggle switch.
+          - **Hero Status Indicator**: Prominent Section 0 status card with glowing indicator dot and instant Active/Inactive toggle switch.
           - **Bookmarks Reorganized**: Saved bookmarks now appear above Recents for faster access.
           - **Recognizable Place Names**: Recents rows display reverse-geocoded place names and street addresses.
           - **Drift Slider**: Smooth continuous slider (5m–150m) replaces numeric text input for natural GPS fluctuation.
-          - **Mobile-Optimized Website**: Lightweight showcase site with primary SideStore and secondary LiveContainer buttons.
 
           ### Assets
           - `LocationSpoofer.dylib`: Sideloadable arm64 Mach-O dynamic library for iOS 14.0+
@@ -89,7 +91,7 @@ jobs:
           } || {
             gh release create "$TAG" LocationSpoofer.dylib \
               --repo getsentrix/LSpoof \
-              --title "$TAG - Hero Status, Current Location & Drift Slider" \
+              --title "$TAG - In-App Auto Update Checker & UI Polish" \
               --notes-file notes.md
           }
 

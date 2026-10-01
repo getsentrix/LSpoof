@@ -7,13 +7,12 @@
 <h3 align="center">Universal iOS Location Spoofer</h3>
 
 <p align="center">
-  Clean, native GPS spoofer for sideloaded iOS apps with Apple Maps integration, route simulation, and a native iOS interface. <strong>No jailbreak required.</strong>
+  Precision GPS spoofer for sideloaded iOS apps with Apple Maps integration, route simulation, and a native iOS interface. <strong>No jailbreak required.</strong>
 </p>
 
 <p align="center">
   <a href="https://getsentrix.github.io/LSpoof/"><img src="https://img.shields.io/badge/Website-Showcase-09090b?style=flat-square&logo=apple" alt="Showcase Website"></a>
   <a href="https://github.com/getsentrix/LSpoof/releases/latest"><img src="https://img.shields.io/github/v/release/getsentrix/LSpoof?style=flat-square&color=09090b" alt="Latest Release"></a>
-  <a href="https://getsentrix.github.io/LSpoof/apps.json"><img src="https://img.shields.io/badge/SideStore-Source-09090b?style=flat-square&logo=apple" alt="SideStore Source"></a>
   <a href="https://github.com/getsentrix/LSpoof/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-09090b?style=flat-square" alt="MIT License"></a>
 </p>
 
@@ -23,24 +22,38 @@
 
 ---
 
-## 📲 1-Click Install
+## ⚡ What's New in v1.1.3
 
-Add the community source directly to your sideloading manager:
-
-- **Add to SideStore (Primary)**: [Open in SideStore](sidestore://source?url=https%3A%2F%2Fgetsentrix.github.io%2FLSpoof%2Fapps.json)
-- **Add to LiveContainer (Secondary)**: Copy `https://getsentrix.github.io/LSpoof/apps.json` and paste in **LiveContainer** under **Tweaks / Sources** → **+ Add Source**.
-- **Add to AltStore**: [Open in AltStore](altstore://source?url=https%3A%2F%2Fgetsentrix.github.io%2FLSpoof%2Fapps.json)
+- **In-App Auto Update Checker**: The dylib automatically checks GitHub Releases on launch and displays an alert popup whenever a new version is available, with a direct 1-tap download link.
+- **Manual Update Check**: Interactive `LSpoof v1.1.3 · Check for Updates` button in the spoofer menu footer.
+- **Auto Current Location**: The map preview automatically centers on your current physical location when opened instead of default California coordinates.
+- **Hero Status Indicator**: Prominent Section 0 status card with a glowing indicator dot and instant Active/Inactive toggle switch.
+- **Saved Bookmarks on Top**: Saved bookmarks now appear above Recents for instant access.
+- **Recognizable Place Names**: Recents show reverse-geocoded place names and street addresses instead of generic coordinates.
+- **Drift Slider**: Smooth continuous slider (5m–150m) replaces numeric text input for natural GPS fluctuation.
 
 ---
 
-## ⚡ What's New in v1.1.2
+## 📦 How to Install (Tweak .dylib)
 
-- **Auto Current Location**: The map preview automatically centers on your current physical location when opened instead of default coordinates.
-- **Hero Status Indicator**: Prominent status card with a glowing indicator dot and instant Active/Inactive toggle switch at the top of the menu.
-- **Saved Bookmarks on Top**: Saved bookmarks now appear above Recents.
-- **Recognizable Place Names**: Recents show reverse-geocoded place names and street addresses instead of generic labels.
-- **Drift Slider**: Smooth slider (5m–150m) replaces numeric text input for natural fluctuation control.
-- **Mobile-Optimized Website**: Lightweight, responsive showcase with SideStore and LiveContainer setup links.
+Because LSpoof is a tweak library (`.dylib`) rather than a standalone application (`.ipa`), inject it into your target app using any sideloading tool:
+
+### 1. LiveContainer (Recommended)
+1. Download `LocationSpoofer.dylib` from [GitHub Releases](https://github.com/getsentrix/LSpoof/releases/latest).
+2. Open **LiveContainer** → **Tweaks** folder and add `LocationSpoofer.dylib`.
+3. Enable the tweak for your loaded app and launch.
+
+### 2. Sideloadly (Windows / macOS)
+1. Load your target `.ipa` in Sideloadly.
+2. Open **Advanced Options** → **Inject Dylibs / Frameworks**.
+3. Add `LocationSpoofer.dylib` and click **Start**.
+
+### 3. TrollStore & Azule
+- Pre-inject `LocationSpoofer.dylib` using Azule:
+  ```bash
+  azule -i App.ipa -o SpoofedApp.ipa -f LocationSpoofer.dylib
+  ```
+- Install the resulting `.ipa` directly in TrollStore.
 
 ---
 
@@ -49,7 +62,7 @@ Add the community source directly to your sideloading manager:
 1. Launch your sideloaded app with `LocationSpoofer.dylib` injected.
 2. **Press and hold three fingers anywhere on the screen for 0.8 seconds.**
 3. The Location Spoofer menu opens instantly.
-4. Set your location and tap **Apply**.
+4. Set your target location and tap **Apply**.
 
 ---
 
@@ -72,29 +85,12 @@ Add the community source directly to your sideloading manager:
 
 ### 3. Bookmarks & Recents
 - **Saved Bookmarks**: Pin frequent places with custom names.
-- **Recent Locations**: Automatically saves your last 5 locations with address names.
+- **Recent Locations**: Automatically saves your last 5 locations with reverse-geocoded place names.
 - **1-Tap Apply**: Instantly switch to any saved or recent location.
 
----
-
-## 📦 Sideloading Options
-
-### SideStore / LiveContainer (Recommended)
-Add source `https://getsentrix.github.io/LSpoof/apps.json` or download `LocationSpoofer.dylib` directly from [Latest Release](https://github.com/getsentrix/LSpoof/releases/latest).
-
-### Sideloadly (Windows / macOS)
-1. Load your target `.ipa` in Sideloadly.
-2. Open **Advanced Options** → **Inject Dylibs / Frameworks**.
-3. Add `LocationSpoofer.dylib`.
-4. Click **Start**.
-
-### Azule (macOS / Linux)
-```bash
-azule -i App.ipa -o SpoofedApp.ipa -f LocationSpoofer.dylib
-```
-
-### TrollStore
-Inject `LocationSpoofer.dylib` into your `.ipa` and install directly with TrollStore.
+### 4. Automatic Update Alerts
+- Automatically checks GitHub Releases in the background.
+- Alerts you on-screen with release notes and a direct download button when an update is available.
 
 ---
 
