@@ -21,6 +21,15 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     BOOL isRoute = (self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute);
     BOOL isLocation = !isSaved && !isRoute;
 
+    if (isRoute) {
+        self.isRouteWaypointSearching = NO;
+        self.searchStartButton.backgroundColor = [UIColor.systemGreenColor colorWithAlphaComponent:0.12];
+        self.searchDestButton.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.12];
+    } else if (isLocation) {
+        self.isRouteWaypointSearching = NO;
+        self.searchBar.placeholder = @"Search city, address, or landmark";
+    }
+
     self.mapContainer.hidden = NO;
     if (isLocation) {
         self.searchBar.hidden = NO;

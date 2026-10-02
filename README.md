@@ -19,9 +19,10 @@
 
 ---
 
-## ⚡ What's New in v1.2.3 (Stable Build)
+## ⚡ What's New in v1.2.4 (Stable Build)
 
-- **Lightweight Waypoint Search**: Tap either Start Point or Destination (or their search icons) to search any city, landmark, address, or coordinate in Route mode.
+- **Unfolding Waypoint Search**: Tap either Start Point or Destination (or their search icons) to smoothly unfold the exact native search box with real-time Apple Maps auto-suggestions over the map.
+- **Auto-Routing on Selection**: Choosing a suggestion or entering coordinates anchors the pin, hides the search box, and computes driving/walking/cycling directions automatically.
 - **Ad-Hoc Code Signing**: Pre-signed arm64 dylib with 16KB segment alignment for LiveContainer, TrollStore, and Sideloadly compatibility.
 - **3-Finger Hold Gesture**: Hold three fingers anywhere on screen for 0.8s to open the menu.
 - **Drift Radius Visualization**: Live dashed purple circle overlay shows your randomized GPS fluctuation area directly on the map.

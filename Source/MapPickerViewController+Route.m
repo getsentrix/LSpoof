@@ -810,135 +810,84 @@
 #pragma mark - Route Waypoint Search
 
 - (void)handleSearchStartTapped {
-    [self presentRouteWaypointSearchAlertForTarget:LSRouteWaypointTargetStart];
+    if (self.isRouteWaypointSearching && self.routeSearchTarget == LSRouteWaypointTargetStart) {
+        [self foldRouteWaypointSearchAnimated:YES];
+    } else {
+        [self unfoldRouteWaypointSearchForTarget:LSRouteWaypointTargetStart];
+    }
 }
 
 - (void)handleSearchDestinationTapped {
-    [self presentRouteWaypointSearchAlertForTarget:LSRouteWaypointTargetDestination];
+    if (self.isRouteWaypointSearching && self.routeSearchTarget == LSRouteWaypointTargetDestination) {
+        [self foldRouteWaypointSearchAnimated:YES];
+    } else {
+        [self unfoldRouteWaypointSearchForTarget:LSRouteWaypointTargetDestination];
+    }
 }
 
-- (void)presentRouteWaypointSearchAlertForTarget:(LSRouteWaypointTarget)target {
+- (void)unfoldRouteWaypointSearchForTarget:(LSRouteWaypointTarget)target {
+    self.isRouteWaypointSearching = YES;
+    self.routeSearchTarget = target;
+
     BOOL isStart = (target == LSRouteWaypointTargetStart);
-    NSString *title = isStart ? @"Search Start Point" : @"Search Destination";
-    NSString *message = @"Enter an address, city, landmark, or coordinates:";
+    self.searchBar.placeholder = isStart ? @"Search Start: city, address, or landmark" : @"Search Destination: city, address, or landmark";
+    self.searchBar.text = isStart ? (self.startWaypointName ?: @"") : (self.destinationWaypointName ?: @"");
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
-                                                                   message:message
-                                                            preferredStyle:UIAlertControllerStyleAlert];
+    self.searchStartButton.backgroundColor = isStart ? [UIColor.systemGreenColor colorWithAlphaComponent:0.32] : [UIColor.systemGreenColor colorWithAlphaComponent:0.12];
+    self.searchDestButton.backgroundColor = !isStart ? [UIColor.systemRedColor colorWithAlphaComponent:0.32] : [UIColor.systemRedColor colorWithAlphaComponent:0.12];
+
+    if (self.tableView.contentOffset.y > 0) {
+        [self.tableView setContentOffset:CGPointZero animated:YES];
+    }
+
+    self.searchBar.hidden = NO;
+    self.searchBarHeightConstraint.constant = 44.0;
+    self.searchBarBottomConstraint.constant = 8.0;
 
     __weak typeof(self) weakSelf = self;
-    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
-        textField.placeholder = isStart ? @"e.g. Times Square or lat, lon" : @"e.g. Central Park or lat, lon";
-        textField.clearButtonMode = UITextFieldViewModeWhileEditing;
-        textField.autocapitalizationType = UITextAutocapitalizationTypeWords;
-        textField.autocorrectionType = UITextAutocorrectionTypeNo;
-        textField.returnKeyType = UIReturnKeySearch;
-        NSString *existing = isStart ? weakSelf.startWaypointName : weakSelf.destinationWaypointName;
-        if (existing.length > 0) {
-            textField.text = existing;
+    [UIView animateWithDuration:0.25 delay:0 usingSpringWithDamping:0.85 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        weakSelf.searchBar.alpha = 1.0;
+        [weakSelf ls_updateTableHeaderLayout];
+    } completion:^(BOOL finished) {
+        (void)finished;
+        [weakSelf.searchBar becomeFirstResponder];
+        if (weakSelf.searchBar.text.length > 0) {
+            [weakSelf updateSearchQueryFragment:weakSelf.searchBar.text];
         }
     }];
-
-    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
-    UIAlertAction *searchAction = [UIAlertAction actionWithTitle:@"Search"
-                                                           style:UIAlertActionStyleDefault
-                                                         handler:^(UIAlertAction * _Nonnull action) {
-        (void)action;
-        UITextField *field = alert.textFields.firstObject;
-        NSString *query = [field.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-        if (query.length > 0) {
-            [weakSelf executeRouteWaypointSearch:query forTarget:target];
-        }
-    }];
-
-    [alert addAction:cancelAction];
-    [alert addAction:searchAction];
-    alert.preferredAction = searchAction;
-
-    [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)executeRouteWaypointSearch:(NSString *)query forTarget:(LSRouteWaypointTarget)target {
-    NSString *trimmed = [query stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    if (trimmed.length == 0) return;
+- (void)foldRouteWaypointSearchAnimated:(BOOL)animated {
+    self.isRouteWaypointSearching = NO;
+    [self.searchBar resignFirstResponder];
+    [self hideSearchSuggestions];
 
-    // Check for direct coordinate input: "37.7749, -122.4194"
-    NSArray<NSString *> *parts = [trimmed componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@", "]];
-    NSMutableArray<NSString *> *tokens = [NSMutableArray array];
-    for (NSString *p in parts) {
-        if (p.length > 0) [tokens addObject:p];
-    }
-    if (tokens.count == 2) {
-        double lat = [tokens[0] doubleValue];
-        double lon = [tokens[1] doubleValue];
-        if (CLLocationCoordinate2DIsValid(CLLocationCoordinate2DMake(lat, lon)) &&
-            fabs(lat) <= 90.0 && fabs(lon) <= 180.0 &&
-            (fabs(lat) > 0.0001 || fabs(lon) > 0.0001)) {
-            [self applyRouteWaypointCoordinate:CLLocationCoordinate2DMake(lat, lon)
-                                          name:[NSString stringWithFormat:@"%.5f, %.5f", lat, lon]
-                                     forTarget:target];
-            return;
+    self.searchStartButton.backgroundColor = [UIColor.systemGreenColor colorWithAlphaComponent:0.12];
+    self.searchDestButton.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.12];
+
+    void (^completionBlock)(BOOL) = ^(BOOL finished) {
+        (void)finished;
+        if (!self.isRouteWaypointSearching && (self.panelTab == LSMapPickerPanelTabRoute || self.coordinateMode == LSMapPickerCoordinateModeRoute)) {
+            self.searchBar.hidden = YES;
         }
+        self.searchBar.placeholder = @"Search city, address, or landmark";
+        self.searchBar.text = @"";
+        [self ls_updateTableHeaderLayout];
+    };
+
+    if (animated) {
+        self.searchBarHeightConstraint.constant = 0.0;
+        self.searchBarBottomConstraint.constant = 0.0;
+        [UIView animateWithDuration:0.22 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+            self.searchBar.alpha = 0.0;
+            [self ls_updateTableHeaderLayout];
+        } completion:completionBlock];
+    } else {
+        self.searchBarHeightConstraint.constant = 0.0;
+        self.searchBarBottomConstraint.constant = 0.0;
+        self.searchBar.alpha = 0.0;
+        completionBlock(YES);
     }
-
-    [self.routeSpinner startAnimating];
-    self.statusLabel.text = [NSString stringWithFormat:@"Searching %@...", (target == LSRouteWaypointTargetStart ? @"start" : @"destination")];
-
-    MKLocalSearchRequest *request = [[MKLocalSearchRequest alloc] init];
-    request.naturalLanguageQuery = trimmed;
-    if (CLLocationCoordinate2DIsValid(self.mapView.region.center)) {
-        request.region = self.mapView.region;
-    }
-
-    MKLocalSearch *search = [[MKLocalSearch alloc] initWithRequest:request];
-    __weak typeof(self) weakSelf = self;
-    [search startWithCompletionHandler:^(MKLocalSearchResponse * _Nullable response, NSError * _Nullable error) {
-        typeof(self) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [strongSelf.routeSpinner stopAnimating];
-            [strongSelf refreshStatusPill];
-
-            if (error || !response || response.mapItems.count == 0) {
-                [strongSelf playRouteFailureHaptic];
-                UIAlertController *errAlert = [UIAlertController alertControllerWithTitle:@"Location Not Found"
-                                                                                  message:[NSString stringWithFormat:@"No matching places found for \"%@\".", trimmed]
-                                                                           preferredStyle:UIAlertControllerStyleAlert];
-                [errAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]];
-                [strongSelf presentViewController:errAlert animated:YES completion:nil];
-                return;
-            }
-
-            if (response.mapItems.count == 1) {
-                MKMapItem *item = response.mapItems.firstObject;
-                NSString *name = item.name ?: trimmed;
-                [strongSelf applyRouteWaypointCoordinate:item.placemark.coordinate name:name forTarget:target];
-            } else {
-                UIAlertController *chooser = [UIAlertController alertControllerWithTitle:@"Select Location"
-                                                                                 message:[NSString stringWithFormat:@"Found multiple matches for \"%@\":", trimmed]
-                                                                          preferredStyle:UIAlertControllerStyleActionSheet];
-                NSUInteger limit = MIN(response.mapItems.count, 4);
-                for (NSUInteger i = 0; i < limit; i++) {
-                    MKMapItem *item = response.mapItems[i];
-                    NSString *itemTitle = item.name ?: @"Unknown";
-                    if (item.placemark.title && ![item.placemark.title isEqualToString:itemTitle]) {
-                        itemTitle = [NSString stringWithFormat:@"%@ (%@)", itemTitle, item.placemark.title];
-                    }
-                    [chooser addAction:[UIAlertAction actionWithTitle:itemTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                        (void)action;
-                        [strongSelf applyRouteWaypointCoordinate:item.placemark.coordinate name:item.name ?: trimmed forTarget:target];
-                    }]];
-                }
-                [chooser addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-                if (chooser.popoverPresentationController) {
-                    UIView *sourceView = (target == LSRouteWaypointTargetStart) ? strongSelf.searchStartButton : strongSelf.searchDestButton;
-                    chooser.popoverPresentationController.sourceView = sourceView ?: strongSelf.view;
-                    chooser.popoverPresentationController.sourceRect = sourceView ? sourceView.bounds : strongSelf.view.bounds;
-                }
-                [strongSelf presentViewController:chooser animated:YES completion:nil];
-            }
-        });
-    }];
 }
 
 - (void)applyRouteWaypointCoordinate:(CLLocationCoordinate2D)coord name:(nullable NSString *)name forTarget:(LSRouteWaypointTarget)target {

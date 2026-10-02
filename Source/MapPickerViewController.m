@@ -1433,7 +1433,14 @@ static const CGFloat kLSMapHeight = 220.0;
             [strongSelf.searchSpinner stopAnimating];
             if (error || response.mapItems.count == 0) return;
             MKMapItem *item = response.mapItems.firstObject;
-            [strongSelf movePinToCoordinate:item.placemark.coordinate animated:YES];
+            if (strongSelf.isRouteWaypointSearching) {
+                [strongSelf applyRouteWaypointCoordinate:item.placemark.coordinate
+                                                    name:item.name ?: completion.title
+                                               forTarget:strongSelf.routeSearchTarget];
+                [strongSelf foldRouteWaypointSearchAnimated:YES];
+            } else {
+                [strongSelf movePinToCoordinate:item.placemark.coordinate animated:YES];
+            }
         });
     }];
 }
@@ -1444,6 +1451,31 @@ static const CGFloat kLSMapHeight = 220.0;
 
     [self hideSearchSuggestions];
     [self.searchBar resignFirstResponder];
+
+    // Check for direct coordinate input: "37.7749, -122.4194"
+    NSArray<NSString *> *parts = [trimmed componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@", "]];
+    NSMutableArray<NSString *> *tokens = [NSMutableArray array];
+    for (NSString *p in parts) {
+        if (p.length > 0) [tokens addObject:p];
+    }
+    if (tokens.count == 2) {
+        double lat = [tokens[0] doubleValue];
+        double lon = [tokens[1] doubleValue];
+        if (CLLocationCoordinate2DIsValid(CLLocationCoordinate2DMake(lat, lon)) &&
+            fabs(lat) <= 90.0 && fabs(lon) <= 180.0 &&
+            (fabs(lat) > 0.0001 || fabs(lon) > 0.0001)) {
+            if (self.isRouteWaypointSearching) {
+                [self applyRouteWaypointCoordinate:CLLocationCoordinate2DMake(lat, lon)
+                                              name:[NSString stringWithFormat:@"%.5f, %.5f", lat, lon]
+                                         forTarget:self.routeSearchTarget];
+                [self foldRouteWaypointSearchAnimated:YES];
+            } else {
+                [self movePinToCoordinate:CLLocationCoordinate2DMake(lat, lon) animated:YES];
+            }
+            return;
+        }
+    }
+
     [self.searchSpinner startAnimating];
 
     MKLocalSearchRequest *request = [[MKLocalSearchRequest alloc] init];
@@ -1460,7 +1492,14 @@ static const CGFloat kLSMapHeight = 220.0;
             [strongSelf.searchSpinner stopAnimating];
             if (error || response.mapItems.count == 0) return;
             MKMapItem *item = response.mapItems.firstObject;
-            [strongSelf movePinToCoordinate:item.placemark.coordinate animated:YES];
+            if (strongSelf.isRouteWaypointSearching) {
+                [strongSelf applyRouteWaypointCoordinate:item.placemark.coordinate
+                                                    name:item.name ?: trimmed
+                                               forTarget:strongSelf.routeSearchTarget];
+                [strongSelf foldRouteWaypointSearchAnimated:YES];
+            } else {
+                [strongSelf movePinToCoordinate:item.placemark.coordinate animated:YES];
+            }
         });
     }];
 }
@@ -1499,6 +1538,9 @@ static const CGFloat kLSMapHeight = 220.0;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if (!self.searchBar.isFirstResponder) {
             [self hideSearchSuggestions];
+            if (self.isRouteWaypointSearching) {
+                [self foldRouteWaypointSearchAnimated:YES];
+            }
         }
     });
 }
@@ -1508,6 +1550,9 @@ static const CGFloat kLSMapHeight = 220.0;
     searchBar.showsCancelButton = NO;
     [self hideSearchSuggestions];
     [self.searchSpinner stopAnimating];
+    if (self.isRouteWaypointSearching) {
+        [self foldRouteWaypointSearchAnimated:YES];
+    }
 }
 
 - (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {

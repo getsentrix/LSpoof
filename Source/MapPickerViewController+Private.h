@@ -127,6 +127,8 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UIButton *searchDestButton;
 @property (nonatomic, copy, nullable) NSString *startWaypointName;
 @property (nonatomic, copy, nullable) NSString *destinationWaypointName;
+@property (nonatomic, assign) BOOL isRouteWaypointSearching;
+@property (nonatomic, assign) LSRouteWaypointTarget routeSearchTarget;
 
 @property (nonatomic, strong) MKPointAnnotation *pinAnnotation;
 @property (nonatomic, strong, nullable) LSStartAnnotation *startAnnotation;
@@ -183,6 +185,8 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 - (void)handleThemeChanged:(UISegmentedControl *)sender;
 - (void)updateDriftRadiusOverlay;
 - (void)ls_updateTableHeaderLayout;
+- (void)hideSearchSuggestions;
+- (void)updateSearchQueryFragment:(NSString *)query;
 
 @end
 
@@ -199,8 +203,8 @@ typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
 - (void)handleSnapStartToCurrentLocation;
 - (void)handleSearchStartTapped;
 - (void)handleSearchDestinationTapped;
-- (void)presentRouteWaypointSearchAlertForTarget:(LSRouteWaypointTarget)target;
-- (void)executeRouteWaypointSearch:(NSString *)query forTarget:(LSRouteWaypointTarget)target;
+- (void)unfoldRouteWaypointSearchForTarget:(LSRouteWaypointTarget)target;
+- (void)foldRouteWaypointSearchAnimated:(BOOL)animated;
 - (void)applyRouteWaypointCoordinate:(CLLocationCoordinate2D)coord name:(nullable NSString *)name forTarget:(LSRouteWaypointTarget)target;
 - (void)dismissCustomSpeedKeyboard;
 - (void)ls_handleRouteMapTap:(CLLocationCoordinate2D)coordinate;
