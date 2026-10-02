@@ -1372,12 +1372,16 @@ static const CGFloat kLSMapHeight = 220.0;
         if (!self.searchSuggestionsVisible) {
             self.searchSuggestionsVisible = YES;
             self.suggestionsPanel.alpha = 0.0;
-            [UIView animateWithDuration:0.18 animations:^{
+            self.suggestionsPanel.transform = CGAffineTransformMakeScale(0.97, 0.95);
+            [UIView animateWithDuration:0.28 delay:0 usingSpringWithDamping:0.84 initialSpringVelocity:0.4 options:UIViewAnimationOptionCurveEaseOut animations:^{
                 self.suggestionsPanel.alpha = 1.0;
+                self.suggestionsPanel.transform = CGAffineTransformIdentity;
                 [self.tableHeaderContainer layoutIfNeeded];
-            }];
+            } completion:nil];
         } else {
-            [self.tableHeaderContainer layoutIfNeeded];
+            [UIView animateWithDuration:0.20 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+                [self.tableHeaderContainer layoutIfNeeded];
+            } completion:nil];
         }
     } else {
         [self hideSearchSuggestions];
@@ -1389,11 +1393,13 @@ static const CGFloat kLSMapHeight = 220.0;
     self.suggestionsHeightConstraint.constant = 0.0;
 
     if (!self.suggestionsPanel.hidden) {
-        [UIView animateWithDuration:0.15 animations:^{
+        [UIView animateWithDuration:0.20 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
             self.suggestionsPanel.alpha = 0.0;
+            self.suggestionsPanel.transform = CGAffineTransformMakeScale(0.97, 0.95);
             [self.tableHeaderContainer layoutIfNeeded];
         } completion:^(__unused BOOL finished) {
             self.suggestionsPanel.hidden = YES;
+            self.suggestionsPanel.transform = CGAffineTransformIdentity;
         }];
     }
 }
@@ -1415,8 +1421,27 @@ static const CGFloat kLSMapHeight = 220.0;
     [self.searchSpinner startAnimating];
 }
 
+- (void)handleResolvedMapItem:(MKMapItem *)item queryTitle:(NSString *)queryTitle isRouteSearch:(BOOL)isRouteSearch target:(LSRouteWaypointTarget)target {
+    if (!item) return;
+
+    CLLocationCoordinate2D coord = item.placemark.coordinate;
+    NSString *displayName = item.name ?: queryTitle;
+
+    if (isRouteSearch) {
+        [self applyRouteWaypointCoordinate:coord name:displayName forTarget:target];
+        [self foldRouteWaypointSearchAnimated:YES];
+    } else {
+        [self movePinToCoordinate:coord animated:YES];
+        MKCoordinateRegion region = MKCoordinateRegionMakeWithDistance(coord, 1500.0, 1500.0);
+        [self.mapView setRegion:region animated:YES];
+    }
+}
+
 - (void)resolveSearchCompletion:(MKLocalSearchCompletion *)completion {
     if (!completion) return;
+
+    BOOL isRouteSearch = self.isRouteWaypointSearching;
+    LSRouteWaypointTarget routeTarget = self.routeSearchTarget;
 
     [self hideSearchSuggestions];
     [self.searchBar resignFirstResponder];
@@ -1429,25 +1454,61 @@ static const CGFloat kLSMapHeight = 220.0;
     [search startWithCompletionHandler:^(MKLocalSearchResponse * _Nullable response, NSError * _Nullable error) {
         typeof(self) strongSelf = weakSelf;
         if (!strongSelf) return;
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [strongSelf.searchSpinner stopAnimating];
-            if (error || response.mapItems.count == 0) return;
-            MKMapItem *item = response.mapItems.firstObject;
-            if (strongSelf.isRouteWaypointSearching) {
-                [strongSelf applyRouteWaypointCoordinate:item.placemark.coordinate
-                                                    name:item.name ?: completion.title
-                                               forTarget:strongSelf.routeSearchTarget];
-                [strongSelf foldRouteWaypointSearchAnimated:YES];
-            } else {
-                [strongSelf movePinToCoordinate:item.placemark.coordinate animated:YES];
-            }
-        });
+
+        if (!error && response && response.mapItems.count > 0) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [strongSelf.searchSpinner stopAnimating];
+                MKMapItem *item = response.mapItems.firstObject;
+                [strongSelf handleResolvedMapItem:item
+                                       queryTitle:completion.title
+                                    isRouteSearch:isRouteSearch
+                                           target:routeTarget];
+            });
+            return;
+        }
+
+        // Fallback: If completion search yielded 0 results (common with "Search Nearby" or category queries),
+        // query Apple Maps using natural language with completion title and subtitle
+        NSString *fallbackQuery = completion.title ?: @"";
+        if (completion.subtitle.length > 0 && ![completion.subtitle isEqualToString:@"Search Nearby"]) {
+            fallbackQuery = [NSString stringWithFormat:@"%@ %@", completion.title, completion.subtitle];
+        }
+
+        MKLocalSearchRequest *fallbackReq = [[MKLocalSearchRequest alloc] init];
+        fallbackReq.naturalLanguageQuery = fallbackQuery;
+        if (CLLocationCoordinate2DIsValid(strongSelf.mapView.region.center)) {
+            fallbackReq.region = strongSelf.mapView.region;
+        }
+
+        MKLocalSearch *fallbackSearch = [[MKLocalSearch alloc] initWithRequest:fallbackReq];
+        [fallbackSearch startWithCompletionHandler:^(MKLocalSearchResponse * _Nullable fbResp, NSError * _Nullable fbErr) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [strongSelf.searchSpinner stopAnimating];
+                if (fbErr || !fbResp || fbResp.mapItems.count == 0) {
+                    [strongSelf playRouteFailureHaptic];
+                    strongSelf.statusLabel.text = @"Location not found";
+                    __weak typeof(strongSelf) innerWeak = strongSelf;
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        [innerWeak refreshStatusPill];
+                    });
+                    return;
+                }
+                MKMapItem *fbItem = fbResp.mapItems.firstObject;
+                [strongSelf handleResolvedMapItem:fbItem
+                                       queryTitle:completion.title
+                                    isRouteSearch:isRouteSearch
+                                           target:routeTarget];
+            });
+        }];
     }];
 }
 
 - (void)resolveSearchQuery:(NSString *)query {
     NSString *trimmed = [query stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
     if (trimmed.length == 0) return;
+
+    BOOL isRouteSearch = self.isRouteWaypointSearching;
+    LSRouteWaypointTarget routeTarget = self.routeSearchTarget;
 
     [self hideSearchSuggestions];
     [self.searchBar resignFirstResponder];
@@ -1464,10 +1525,10 @@ static const CGFloat kLSMapHeight = 220.0;
         if (CLLocationCoordinate2DIsValid(CLLocationCoordinate2DMake(lat, lon)) &&
             fabs(lat) <= 90.0 && fabs(lon) <= 180.0 &&
             (fabs(lat) > 0.0001 || fabs(lon) > 0.0001)) {
-            if (self.isRouteWaypointSearching) {
+            if (isRouteSearch) {
                 [self applyRouteWaypointCoordinate:CLLocationCoordinate2DMake(lat, lon)
                                               name:[NSString stringWithFormat:@"%.5f, %.5f", lat, lon]
-                                         forTarget:self.routeSearchTarget];
+                                         forTarget:routeTarget];
                 [self foldRouteWaypointSearchAnimated:YES];
             } else {
                 [self movePinToCoordinate:CLLocationCoordinate2DMake(lat, lon) animated:YES];
@@ -1490,16 +1551,17 @@ static const CGFloat kLSMapHeight = 220.0;
         if (!strongSelf) return;
         dispatch_async(dispatch_get_main_queue(), ^{
             [strongSelf.searchSpinner stopAnimating];
-            if (error || response.mapItems.count == 0) return;
-            MKMapItem *item = response.mapItems.firstObject;
-            if (strongSelf.isRouteWaypointSearching) {
-                [strongSelf applyRouteWaypointCoordinate:item.placemark.coordinate
-                                                    name:item.name ?: trimmed
-                                               forTarget:strongSelf.routeSearchTarget];
-                [strongSelf foldRouteWaypointSearchAnimated:YES];
-            } else {
-                [strongSelf movePinToCoordinate:item.placemark.coordinate animated:YES];
+            if (error || !response || response.mapItems.count == 0) {
+                [strongSelf playRouteFailureHaptic];
+                strongSelf.statusLabel.text = @"Location not found";
+                __weak typeof(strongSelf) innerWeak = strongSelf;
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    [innerWeak refreshStatusPill];
+                });
+                return;
             }
+            MKMapItem *item = response.mapItems.firstObject;
+            [strongSelf handleResolvedMapItem:item queryTitle:trimmed isRouteSearch:isRouteSearch target:routeTarget];
         });
     }];
 }
@@ -1538,9 +1600,6 @@ static const CGFloat kLSMapHeight = 220.0;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if (!self.searchBar.isFirstResponder) {
             [self hideSearchSuggestions];
-            if (self.isRouteWaypointSearching) {
-                [self foldRouteWaypointSearchAnimated:YES];
-            }
         }
     });
 }
@@ -1561,11 +1620,9 @@ static const CGFloat kLSMapHeight = 220.0;
 }
 
 - (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
-    if (self.searchCompletions.count > 0) {
-        [self resolveSearchCompletion:self.searchCompletions.firstObject];
-        return;
-    }
-    [self resolveSearchQuery:searchBar.text];
+    NSString *text = [searchBar.text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if (text.length == 0) return;
+    [self resolveSearchQuery:text];
 }
 
 #pragma mark - Keyboard

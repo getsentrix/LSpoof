@@ -19,8 +19,10 @@
 
 ---
 
-## ⚡ What's New in v1.2.4 (Stable Build)
+## ⚡ What's New in v1.2.5 (Stable Build)
 
+- **Fixed Search Nearby & Category Completions**: Selecting "Search Nearby" or category-based Apple Maps auto-suggestions now resolves coordinates accurately with natural language fallback and race-free coordinate anchoring.
+- **Fluid Spring & Flow Animations**: Tactile spring bounce on waypoint search and snap reticle buttons, smooth slide-and-fade unfolding/folding with spring damping, dynamic camera focus, and cross-dissolve route table updates.
 - **Unfolding Waypoint Search**: Tap either Start Point or Destination (or their search icons) to smoothly unfold the exact native search box with real-time Apple Maps auto-suggestions over the map.
 - **Auto-Routing on Selection**: Choosing a suggestion or entering coordinates anchors the pin, hides the search box, and computes driving/walking/cycling directions automatically.
 - **Ad-Hoc Code Signing**: Pre-signed arm64 dylib with 16KB segment alignment for LiveContainer, TrollStore, and Sideloadly compatibility.

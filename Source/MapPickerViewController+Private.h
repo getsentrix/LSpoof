@@ -192,6 +192,7 @@ typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
 - (void)ls_updateTableHeaderLayout;
 - (void)hideSearchSuggestions;
 - (void)updateSearchQueryFragment:(NSString *)query;
+- (void)handleResolvedMapItem:(MKMapItem *)item queryTitle:(NSString *)queryTitle isRouteSearch:(BOOL)isRouteSearch target:(LSRouteWaypointTarget)target;
 
 @end
 

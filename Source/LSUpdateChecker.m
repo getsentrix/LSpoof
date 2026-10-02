@@ -1,6 +1,6 @@
 #import "LSUpdateChecker.h"
 
-NSString * const LSpoofCurrentVersion = @"1.2.4";
+NSString * const LSpoofCurrentVersion = @"1.2.5";
 NSString * const LSpoofGitHubReleasesURL = @"https://github.com/getsentrix/LSpoof/releases/latest";
 static NSString * const kLSpoofApiReleasesURL = @"https://api.github.com/repos/getsentrix/LSpoof/releases/latest";
 static NSString * const kLSLastCheckDefaultsKey = @"LSpoofLastUpdateCheckTimestamp";

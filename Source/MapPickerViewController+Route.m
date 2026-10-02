@@ -555,6 +555,7 @@
 }
 
 - (void)handleSnapStartToCurrentLocation {
+    [self ls_animateButtonBounce:self.snapStartButton];
     CLLocationCoordinate2D snapCoordinate = kCLLocationCoordinate2DInvalid;
     if ([[PersistenceManager shared] isSpoofingEnabled] && [[PersistenceManager shared] hasStoredCoordinate]) {
         snapCoordinate = [[PersistenceManager shared] spoofCoordinate];
@@ -809,7 +810,20 @@
 
 #pragma mark - Route Waypoint Search
 
+- (void)ls_animateButtonBounce:(UIButton *)button {
+    if (!button) return;
+    [UIView animateWithDuration:0.10 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        button.transform = CGAffineTransformMakeScale(0.88, 0.88);
+    } completion:^(BOOL finished) {
+        (void)finished;
+        [UIView animateWithDuration:0.28 delay:0 usingSpringWithDamping:0.55 initialSpringVelocity:0.6 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            button.transform = CGAffineTransformIdentity;
+        } completion:nil];
+    }];
+}
+
 - (void)handleSearchStartTapped {
+    [self ls_animateButtonBounce:self.searchStartButton];
     if (self.isRouteWaypointSearching && self.routeSearchTarget == LSRouteWaypointTargetStart) {
         [self foldRouteWaypointSearchAnimated:YES];
     } else {
@@ -818,6 +832,7 @@
 }
 
 - (void)handleSearchDestinationTapped {
+    [self ls_animateButtonBounce:self.searchDestButton];
     if (self.isRouteWaypointSearching && self.routeSearchTarget == LSRouteWaypointTargetDestination) {
         [self foldRouteWaypointSearchAnimated:YES];
     } else {
@@ -833,8 +848,10 @@
     self.searchBar.placeholder = isStart ? @"Search Start: city, address, or landmark" : @"Search Destination: city, address, or landmark";
     self.searchBar.text = isStart ? (self.startWaypointName ?: @"") : (self.destinationWaypointName ?: @"");
 
-    self.searchStartButton.backgroundColor = isStart ? [UIColor.systemGreenColor colorWithAlphaComponent:0.32] : [UIColor.systemGreenColor colorWithAlphaComponent:0.12];
-    self.searchDestButton.backgroundColor = !isStart ? [UIColor.systemRedColor colorWithAlphaComponent:0.32] : [UIColor.systemRedColor colorWithAlphaComponent:0.12];
+    [UIView animateWithDuration:0.20 animations:^{
+        self.searchStartButton.backgroundColor = isStart ? [UIColor.systemGreenColor colorWithAlphaComponent:0.32] : [UIColor.systemGreenColor colorWithAlphaComponent:0.12];
+        self.searchDestButton.backgroundColor = !isStart ? [UIColor.systemRedColor colorWithAlphaComponent:0.32] : [UIColor.systemRedColor colorWithAlphaComponent:0.12];
+    }];
 
     if (self.tableView.contentOffset.y > 0) {
         [self.tableView setContentOffset:CGPointZero animated:YES];
@@ -843,10 +860,13 @@
     self.searchBar.hidden = NO;
     self.searchBarHeightConstraint.constant = 44.0;
     self.searchBarBottomConstraint.constant = 8.0;
+    self.searchBar.alpha = 0.0;
+    self.searchBar.transform = CGAffineTransformMakeTranslation(0, -6.0);
 
     __weak typeof(self) weakSelf = self;
-    [UIView animateWithDuration:0.25 delay:0 usingSpringWithDamping:0.85 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+    [UIView animateWithDuration:0.30 delay:0 usingSpringWithDamping:0.82 initialSpringVelocity:0.3 options:UIViewAnimationOptionCurveEaseOut animations:^{
         weakSelf.searchBar.alpha = 1.0;
+        weakSelf.searchBar.transform = CGAffineTransformIdentity;
         [weakSelf ls_updateTableHeaderLayout];
     } completion:^(BOOL finished) {
         (void)finished;
@@ -862,8 +882,10 @@
     [self.searchBar resignFirstResponder];
     [self hideSearchSuggestions];
 
-    self.searchStartButton.backgroundColor = [UIColor.systemGreenColor colorWithAlphaComponent:0.12];
-    self.searchDestButton.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.12];
+    [UIView animateWithDuration:0.20 animations:^{
+        self.searchStartButton.backgroundColor = [UIColor.systemGreenColor colorWithAlphaComponent:0.12];
+        self.searchDestButton.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.12];
+    }];
 
     void (^completionBlock)(BOOL) = ^(BOOL finished) {
         (void)finished;
@@ -872,14 +894,16 @@
         }
         self.searchBar.placeholder = @"Search city, address, or landmark";
         self.searchBar.text = @"";
+        self.searchBar.transform = CGAffineTransformIdentity;
         [self ls_updateTableHeaderLayout];
     };
 
     if (animated) {
         self.searchBarHeightConstraint.constant = 0.0;
         self.searchBarBottomConstraint.constant = 0.0;
-        [UIView animateWithDuration:0.22 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        [UIView animateWithDuration:0.24 delay:0 usingSpringWithDamping:0.9 initialSpringVelocity:0.2 options:UIViewAnimationOptionCurveEaseInOut animations:^{
             self.searchBar.alpha = 0.0;
+            self.searchBar.transform = CGAffineTransformMakeTranslation(0, -6.0);
             [self ls_updateTableHeaderLayout];
         } completion:completionBlock];
     } else {
@@ -914,7 +938,7 @@
             [self.mapView addAnnotation:self.destinationAnnotation];
         }
         self.destinationAnnotation.coordinate = coord;
-        self.routePlacementPhase = LSRoutePlacementPhaseStart;
+        self.routePlacementPhase = self.startAnnotation ? LSRoutePlacementPhaseDestination : LSRoutePlacementPhaseStart;
         self.mapHintLabel.text = self.startAnnotation ? @"  Tap Get Route Directions  " : @"  Tap map for start point  ";
     }
 
@@ -926,7 +950,9 @@
 
     [self ls_updateRouteWaypointLabels];
     [self ls_updateRoutePlaybackCell];
-    [self.tableView reloadData];
+    [UIView transitionWithView:self.tableView duration:0.24 options:UIViewAnimationOptionTransitionCrossDissolve animations:^{
+        [self.tableView reloadData];
+    } completion:nil];
 
     if (self.startAnnotation && CLLocationCoordinate2DIsValid(self.startAnnotation.coordinate) &&
         self.destinationAnnotation && CLLocationCoordinate2DIsValid(self.destinationAnnotation.coordinate)) {
