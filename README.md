@@ -8,6 +8,7 @@
 
 <p align="center">
   GPS location spoofer for sideloaded iOS apps. Supports Life360. <strong>No jailbreak required.</strong>
+<a href="https://www.virustotal.com/gui/file/e7706c93c59bd5059d95ccb3e498b8dc7a1e8c5807790dd9d1b9032a3f250e7e/detection">VirusTotal Analysis</a>
 </p>
 
 <p align="center">
