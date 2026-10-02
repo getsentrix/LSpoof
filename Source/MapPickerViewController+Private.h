@@ -23,6 +23,11 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
     LSRoutePlacementPhaseDestination = 1
 };
 
+typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
+    LSRouteWaypointTargetStart = 0,
+    LSRouteWaypointTargetDestination = 1
+};
+
 @interface LSStartAnnotation : MKPointAnnotation
 @end
 
@@ -189,12 +194,6 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 - (void)updateSearchQueryFragment:(NSString *)query;
 
 @end
-
-
-typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
-    LSRouteWaypointTargetStart = 0,
-    LSRouteWaypointTargetDestination = 1
-};
 
 @interface MapPickerViewController (LSRouteUI) <LSRouteSimulatorDelegate>
 
