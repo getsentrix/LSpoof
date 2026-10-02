@@ -18,7 +18,7 @@
       "localizedDescription": "Universal GPS, altitude, and heading spoofer for sideloaded iOS apps. Features draggable pins, real-time route simulation along Apple Maps road networks, randomized GPS drift fluctuation, and a native iOS 16+ Inset Grouped interface.",
       "iconURL": "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png",
       "tintColor": "007AFF",
-      "size": 532576,
+      "size": 552928,
       "screenshotURLs": [
         "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/preview-static.png"
       ]
