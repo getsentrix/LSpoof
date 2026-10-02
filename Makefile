@@ -1,5 +1,5 @@
 ARCHS = arm64
-TARGET = iphone:clang:latest:16.0
+TARGET = iphone:clang:latest:14.0
 
 include $(THEOS)/makefiles/common.mk
 
@@ -20,6 +20,6 @@ LocationSpoofer_FILES = \
 
 LocationSpoofer_CFLAGS = -fobjc-arc -Wall -Wextra -ISource
 LocationSpoofer_FRAMEWORKS = Foundation UIKit CoreLocation MapKit CoreGraphics QuartzCore
-LocationSpoofer_LDFLAGS = -install_name @executable_path/Frameworks/LocationSpoofer.dylib
+LocationSpoofer_LDFLAGS = -install_name @rpath/LocationSpoofer.dylib -Wl,-segalign,0x4000
 
 include $(THEOS)/makefiles/library.mk
