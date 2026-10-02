@@ -12,13 +12,13 @@
       "developerName": "getsentrix",
       "subtitle": "Universal GPS Spoofer for iOS",
       "version": "1.2.3",
-      "versionDate": "2026-10-02T15:50:00Z",
+      "versionDate": "2026-10-02T20:50:37Z",
       "versionDescription": "LSpoof v1.2.3 - Route Waypoint Search & Stable Build",
       "downloadURL": "https://github.com/getsentrix/LSpoof/releases/download/v1.2.3/LocationSpoofer.dylib",
       "localizedDescription": "Universal GPS, altitude, and heading spoofer for sideloaded iOS apps. Features draggable pins, real-time route simulation along Apple Maps road networks, randomized GPS drift fluctuation, and a native iOS 16+ Inset Grouped interface.",
       "iconURL": "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png",
       "tintColor": "007AFF",
-      "size": 552928,
+      "size": 449768,
       "screenshotURLs": [
         "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/preview-static.png"
       ]
@@ -28,8 +28,8 @@
     {
       "title": "LSpoof v1.2.3 Released",
       "identifier": "lspoof-release-1.2.3",
-      "caption": "Route Waypoint Search, Ad-Hoc Code Signing & Stability",
-      "date": "2026-10-02T15:50:00Z",
+      "caption": "Modern Inset Grouped UI, Apple SF Symbols & Stability Polish",
+      "date": "2026-10-02T20:50:37Z",
       "tintColor": "007AFF",
       "imageURL": "https://raw.githubusercontent.com/getsentrix/LSpoof/main/docs/assets/icon.png",
       "url": "https://github.com/getsentrix/LSpoof/releases/tag/v1.2.3"
