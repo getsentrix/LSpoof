@@ -123,6 +123,11 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @property (nonatomic, strong) UITableViewCell *routePlaybackCell;
 @property (nonatomic, strong) UITableViewCell *routeCancelCell;
 
+@property (nonatomic, strong) UIButton *searchStartButton;
+@property (nonatomic, strong) UIButton *searchDestButton;
+@property (nonatomic, copy, nullable) NSString *startWaypointName;
+@property (nonatomic, copy, nullable) NSString *destinationWaypointName;
+
 @property (nonatomic, strong) MKPointAnnotation *pinAnnotation;
 @property (nonatomic, strong, nullable) LSStartAnnotation *startAnnotation;
 @property (nonatomic, strong, nullable) LSDestinationAnnotation *destinationAnnotation;
@@ -182,11 +187,21 @@ typedef NS_ENUM(NSInteger, LSRoutePlacementPhase) {
 @end
 
 
+typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
+    LSRouteWaypointTargetStart = 0,
+    LSRouteWaypointTargetDestination = 1
+};
+
 @interface MapPickerViewController (LSRouteUI) <LSRouteSimulatorDelegate>
 
 - (void)buildRouteControls;
 - (void)handleGetRouteTapped;
 - (void)handleSnapStartToCurrentLocation;
+- (void)handleSearchStartTapped;
+- (void)handleSearchDestinationTapped;
+- (void)presentRouteWaypointSearchAlertForTarget:(LSRouteWaypointTarget)target;
+- (void)executeRouteWaypointSearch:(NSString *)query forTarget:(LSRouteWaypointTarget)target;
+- (void)applyRouteWaypointCoordinate:(CLLocationCoordinate2D)coord name:(nullable NSString *)name forTarget:(LSRouteWaypointTarget)target;
 - (void)dismissCustomSpeedKeyboard;
 - (void)ls_handleRouteMapTap:(CLLocationCoordinate2D)coordinate;
 - (void)updateCoordinateModeVisibility;

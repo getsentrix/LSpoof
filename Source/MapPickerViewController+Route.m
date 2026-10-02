@@ -115,7 +115,7 @@
     // Start cell
     self.routeStartCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     self.routeStartCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-    self.routeStartCell.selectionStyle = UITableViewCellSelectionStyleNone;
+    self.routeStartCell.selectionStyle = UITableViewCellSelectionStyleDefault;
 
     UIView *startBadge = [MapPickerViewController iconBadgeWithSymbolName:@"flag.fill" backgroundColor:UIColor.systemGreenColor];
     [self.routeStartCell.contentView addSubview:startBadge];
@@ -132,8 +132,20 @@
     self.routeStartSubLabel.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
     self.routeStartSubLabel.textColor = UIColor.secondaryLabelColor;
     self.routeStartSubLabel.numberOfLines = 0;
-    self.routeStartSubLabel.text = @"Tap map to set start position";
+    self.routeStartSubLabel.text = @"Tap to search or tap map";
     [self.routeStartCell.contentView addSubview:self.routeStartSubLabel];
+
+    UIImageSymbolConfiguration *searchConfig = [UIImageSymbolConfiguration configurationWithPointSize:15.0 weight:UIFontWeightSemibold];
+    self.searchStartButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.searchStartButton.translatesAutoresizingMaskIntoConstraints = NO;
+    UIImage *searchImg = [MapPickerViewController systemImageNamedWithFallback:@"magnifyingglass" configuration:searchConfig];
+    [self.searchStartButton setImage:searchImg forState:UIControlStateNormal];
+    self.searchStartButton.tintColor = UIColor.systemGreenColor;
+    self.searchStartButton.backgroundColor = [UIColor.systemGreenColor colorWithAlphaComponent:0.12];
+    self.searchStartButton.layer.cornerRadius = 16.0;
+    self.searchStartButton.layer.cornerCurve = kCACornerCurveContinuous;
+    [self.searchStartButton addTarget:self action:@selector(handleSearchStartTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.routeStartCell.contentView addSubview:self.searchStartButton];
 
     self.snapStartButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.snapStartButton.translatesAutoresizingMaskIntoConstraints = NO;
@@ -152,6 +164,16 @@
         [startBadge.leadingAnchor constraintEqualToAnchor:self.routeStartCell.contentView.leadingAnchor constant:16.0],
         [startBadge.centerYAnchor constraintEqualToAnchor:self.routeStartCell.contentView.centerYAnchor],
 
+        [self.searchStartButton.trailingAnchor constraintEqualToAnchor:self.routeStartCell.contentView.trailingAnchor constant:-16.0],
+        [self.searchStartButton.centerYAnchor constraintEqualToAnchor:self.routeStartCell.contentView.centerYAnchor],
+        [self.searchStartButton.widthAnchor constraintEqualToConstant:34.0],
+        [self.searchStartButton.heightAnchor constraintEqualToConstant:34.0],
+
+        [self.snapStartButton.trailingAnchor constraintEqualToAnchor:self.searchStartButton.leadingAnchor constant:-8.0],
+        [self.snapStartButton.centerYAnchor constraintEqualToAnchor:self.routeStartCell.contentView.centerYAnchor],
+        [self.snapStartButton.widthAnchor constraintEqualToConstant:34.0],
+        [self.snapStartButton.heightAnchor constraintEqualToConstant:34.0],
+
         [startTitle.leadingAnchor constraintEqualToAnchor:startBadge.trailingAnchor constant:12.0],
         [startTitle.topAnchor constraintEqualToAnchor:self.routeStartCell.contentView.topAnchor constant:12.0],
         [startTitle.trailingAnchor constraintLessThanOrEqualToAnchor:self.snapStartButton.leadingAnchor constant:-8.0],
@@ -159,18 +181,13 @@
         [self.routeStartSubLabel.leadingAnchor constraintEqualToAnchor:startTitle.leadingAnchor],
         [self.routeStartSubLabel.topAnchor constraintEqualToAnchor:startTitle.bottomAnchor constant:4.0],
         [self.routeStartSubLabel.bottomAnchor constraintEqualToAnchor:self.routeStartCell.contentView.bottomAnchor constant:-12.0],
-        [self.routeStartSubLabel.trailingAnchor constraintEqualToAnchor:self.snapStartButton.leadingAnchor constant:-8.0],
-
-        [self.snapStartButton.trailingAnchor constraintEqualToAnchor:self.routeStartCell.contentView.trailingAnchor constant:-16.0],
-        [self.snapStartButton.centerYAnchor constraintEqualToAnchor:self.routeStartCell.contentView.centerYAnchor],
-        [self.snapStartButton.widthAnchor constraintEqualToConstant:34.0],
-        [self.snapStartButton.heightAnchor constraintEqualToConstant:34.0]
+        [self.routeStartSubLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.snapStartButton.leadingAnchor constant:-8.0]
     ]];
 
     // Dest cell
     self.routeDestCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     self.routeDestCell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-    self.routeDestCell.selectionStyle = UITableViewCellSelectionStyleNone;
+    self.routeDestCell.selectionStyle = UITableViewCellSelectionStyleDefault;
 
     UIView *destBadge = [MapPickerViewController iconBadgeWithSymbolName:@"flag.checkered" backgroundColor:UIColor.systemRedColor];
     [self.routeDestCell.contentView addSubview:destBadge];
@@ -187,20 +204,37 @@
     self.routeDestSubLabel.font = [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightRegular];
     self.routeDestSubLabel.textColor = UIColor.secondaryLabelColor;
     self.routeDestSubLabel.numberOfLines = 0;
-    self.routeDestSubLabel.text = @"Tap map to set destination";
+    self.routeDestSubLabel.text = @"Tap to search or tap map";
     [self.routeDestCell.contentView addSubview:self.routeDestSubLabel];
+
+    self.searchDestButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.searchDestButton.translatesAutoresizingMaskIntoConstraints = NO;
+    UIImage *destSearchImg = [MapPickerViewController systemImageNamedWithFallback:@"magnifyingglass" configuration:searchConfig];
+    [self.searchDestButton setImage:destSearchImg forState:UIControlStateNormal];
+    self.searchDestButton.tintColor = UIColor.systemRedColor;
+    self.searchDestButton.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.12];
+    self.searchDestButton.layer.cornerRadius = 16.0;
+    self.searchDestButton.layer.cornerCurve = kCACornerCurveContinuous;
+    [self.searchDestButton addTarget:self action:@selector(handleSearchDestinationTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.routeDestCell.contentView addSubview:self.searchDestButton];
 
     [NSLayoutConstraint activateConstraints:@[
         [destBadge.leadingAnchor constraintEqualToAnchor:self.routeDestCell.contentView.leadingAnchor constant:16.0],
         [destBadge.centerYAnchor constraintEqualToAnchor:self.routeDestCell.contentView.centerYAnchor],
 
+        [self.searchDestButton.trailingAnchor constraintEqualToAnchor:self.routeDestCell.contentView.trailingAnchor constant:-16.0],
+        [self.searchDestButton.centerYAnchor constraintEqualToAnchor:self.routeDestCell.contentView.centerYAnchor],
+        [self.searchDestButton.widthAnchor constraintEqualToConstant:34.0],
+        [self.searchDestButton.heightAnchor constraintEqualToConstant:34.0],
+
         [destTitle.leadingAnchor constraintEqualToAnchor:destBadge.trailingAnchor constant:12.0],
         [destTitle.topAnchor constraintEqualToAnchor:self.routeDestCell.contentView.topAnchor constant:12.0],
+        [destTitle.trailingAnchor constraintLessThanOrEqualToAnchor:self.searchDestButton.leadingAnchor constant:-8.0],
 
         [self.routeDestSubLabel.leadingAnchor constraintEqualToAnchor:destTitle.leadingAnchor],
         [self.routeDestSubLabel.topAnchor constraintEqualToAnchor:destTitle.bottomAnchor constant:4.0],
         [self.routeDestSubLabel.bottomAnchor constraintEqualToAnchor:self.routeDestCell.contentView.bottomAnchor constant:-12.0],
-        [self.routeDestSubLabel.trailingAnchor constraintEqualToAnchor:self.routeDestCell.contentView.trailingAnchor constant:-16.0]
+        [self.routeDestSubLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.searchDestButton.leadingAnchor constant:-8.0]
     ]];
 
     // Get directions cell
@@ -317,19 +351,33 @@
 
 - (void)ls_updateRouteWaypointLabels {
     if (self.startAnnotation && CLLocationCoordinate2DIsValid(self.startAnnotation.coordinate)) {
-        self.routeStartSubLabel.text = [NSString stringWithFormat:@"%.6f, %.6f",
-                                        self.startAnnotation.coordinate.latitude,
-                                        self.startAnnotation.coordinate.longitude];
+        if (self.startWaypointName.length > 0) {
+            self.routeStartSubLabel.text = [NSString stringWithFormat:@"%@\n%.6f, %.6f",
+                                            self.startWaypointName,
+                                            self.startAnnotation.coordinate.latitude,
+                                            self.startAnnotation.coordinate.longitude];
+        } else {
+            self.routeStartSubLabel.text = [NSString stringWithFormat:@"%.6f, %.6f",
+                                            self.startAnnotation.coordinate.latitude,
+                                            self.startAnnotation.coordinate.longitude];
+        }
     } else {
-        self.routeStartSubLabel.text = @"Tap map to set start position";
+        self.routeStartSubLabel.text = @"Tap to search or tap map";
     }
 
     if (self.destinationAnnotation && CLLocationCoordinate2DIsValid(self.destinationAnnotation.coordinate)) {
-        self.routeDestSubLabel.text = [NSString stringWithFormat:@"%.6f, %.6f",
-                                       self.destinationAnnotation.coordinate.latitude,
-                                       self.destinationAnnotation.coordinate.longitude];
+        if (self.destinationWaypointName.length > 0) {
+            self.routeDestSubLabel.text = [NSString stringWithFormat:@"%@\n%.6f, %.6f",
+                                            self.destinationWaypointName,
+                                            self.destinationAnnotation.coordinate.latitude,
+                                            self.destinationAnnotation.coordinate.longitude];
+        } else {
+            self.routeDestSubLabel.text = [NSString stringWithFormat:@"%.6f, %.6f",
+                                            self.destinationAnnotation.coordinate.latitude,
+                                            self.destinationAnnotation.coordinate.longitude];
+        }
     } else {
-        self.routeDestSubLabel.text = @"Tap map to set destination";
+        self.routeDestSubLabel.text = @"Tap to search or tap map";
     }
 }
 
@@ -361,6 +409,8 @@
 }
 
 - (void)ls_clearRouteAnnotationsAndOverlay {
+    self.startWaypointName = nil;
+    self.destinationWaypointName = nil;
     if (self.startAnnotation) {
         [self.mapView removeAnnotation:self.startAnnotation];
         self.startAnnotation = nil;
@@ -384,6 +434,7 @@
             [self.mapView addAnnotation:self.startAnnotation];
         }
         self.startAnnotation.coordinate = coordinate;
+        self.startWaypointName = nil;
         self.routePlacementPhase = LSRoutePlacementPhaseDestination;
         self.mapHintLabel.text = @"  Tap map for destination  ";
     } else {
@@ -393,6 +444,7 @@
             [self.mapView addAnnotation:self.destinationAnnotation];
         }
         self.destinationAnnotation.coordinate = coordinate;
+        self.destinationWaypointName = nil;
         self.routePlacementPhase = LSRoutePlacementPhaseStart;
         self.mapHintLabel.text = @"  Tap map to move start  ";
     }
@@ -526,6 +578,7 @@
         [self.mapView addAnnotation:self.startAnnotation];
     }
     self.startAnnotation.coordinate = snapCoordinate;
+    self.startWaypointName = @"Current Location";
     self.routePlacementPhase = self.destinationAnnotation ? LSRoutePlacementPhaseStart : LSRoutePlacementPhaseDestination;
     self.mapHintLabel.text = self.destinationAnnotation ? @"  Tap Get Route Directions  " : @"  Tap map for destination  ";
 
@@ -744,7 +797,194 @@
 }
 
 - (void)ls_routeDidSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    (void)indexPath;
+    if (indexPath.section == 0) {
+        [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+        if (indexPath.row == 0) {
+            [self handleSearchStartTapped];
+        } else if (indexPath.row == 1) {
+            [self handleSearchDestinationTapped];
+        }
+    }
+}
+
+#pragma mark - Route Waypoint Search
+
+- (void)handleSearchStartTapped {
+    [self presentRouteWaypointSearchAlertForTarget:LSRouteWaypointTargetStart];
+}
+
+- (void)handleSearchDestinationTapped {
+    [self presentRouteWaypointSearchAlertForTarget:LSRouteWaypointTargetDestination];
+}
+
+- (void)presentRouteWaypointSearchAlertForTarget:(LSRouteWaypointTarget)target {
+    BOOL isStart = (target == LSRouteWaypointTargetStart);
+    NSString *title = isStart ? @"Search Start Point" : @"Search Destination";
+    NSString *message = @"Enter an address, city, landmark, or coordinates:";
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    __weak typeof(self) weakSelf = self;
+    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+        textField.placeholder = isStart ? @"e.g. Times Square or lat, lon" : @"e.g. Central Park or lat, lon";
+        textField.clearButtonMode = UITextFieldViewModeWhileEditing;
+        textField.autocapitalizationType = UITextAutocapitalizationTypeWords;
+        textField.autocorrectionType = UITextAutocorrectionTypeNo;
+        textField.returnKeyType = UIReturnKeySearch;
+        NSString *existing = isStart ? weakSelf.startWaypointName : weakSelf.destinationWaypointName;
+        if (existing.length > 0) {
+            textField.text = existing;
+        }
+    }];
+
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+    UIAlertAction *searchAction = [UIAlertAction actionWithTitle:@"Search"
+                                                           style:UIAlertActionStyleDefault
+                                                         handler:^(UIAlertAction * _Nonnull action) {
+        (void)action;
+        UITextField *field = alert.textFields.firstObject;
+        NSString *query = [field.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (query.length > 0) {
+            [weakSelf executeRouteWaypointSearch:query forTarget:target];
+        }
+    }];
+
+    [alert addAction:cancelAction];
+    [alert addAction:searchAction];
+    alert.preferredAction = searchAction;
+
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)executeRouteWaypointSearch:(NSString *)query forTarget:(LSRouteWaypointTarget)target {
+    NSString *trimmed = [query stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (trimmed.length == 0) return;
+
+    // Check for direct coordinate input: "37.7749, -122.4194"
+    NSArray<NSString *> *parts = [trimmed componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@", "]];
+    NSMutableArray<NSString *> *tokens = [NSMutableArray array];
+    for (NSString *p in parts) {
+        if (p.length > 0) [tokens addObject:p];
+    }
+    if (tokens.count == 2) {
+        double lat = [tokens[0] doubleValue];
+        double lon = [tokens[1] doubleValue];
+        if (CLLocationCoordinate2DIsValid(CLLocationCoordinate2DMake(lat, lon)) &&
+            fabs(lat) <= 90.0 && fabs(lon) <= 180.0 &&
+            (fabs(lat) > 0.0001 || fabs(lon) > 0.0001)) {
+            [self applyRouteWaypointCoordinate:CLLocationCoordinate2DMake(lat, lon)
+                                          name:[NSString stringWithFormat:@"%.5f, %.5f", lat, lon]
+                                     forTarget:target];
+            return;
+        }
+    }
+
+    [self.routeSpinner startAnimating];
+    self.statusLabel.text = [NSString stringWithFormat:@"Searching %@...", (target == LSRouteWaypointTargetStart ? @"start" : @"destination")];
+
+    MKLocalSearchRequest *request = [[MKLocalSearchRequest alloc] init];
+    request.naturalLanguageQuery = trimmed;
+    if (CLLocationCoordinate2DIsValid(self.mapView.region.center)) {
+        request.region = self.mapView.region;
+    }
+
+    MKLocalSearch *search = [[MKLocalSearch alloc] initWithRequest:request];
+    __weak typeof(self) weakSelf = self;
+    [search startWithCompletionHandler:^(MKLocalSearchResponse * _Nullable response, NSError * _Nullable error) {
+        typeof(self) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [strongSelf.routeSpinner stopAnimating];
+            [strongSelf refreshStatusPill];
+
+            if (error || !response || response.mapItems.count == 0) {
+                [strongSelf playRouteFailureHaptic];
+                UIAlertController *errAlert = [UIAlertController alertControllerWithTitle:@"Location Not Found"
+                                                                                  message:[NSString stringWithFormat:@"No matching places found for \"%@\".", trimmed]
+                                                                           preferredStyle:UIAlertControllerStyleAlert];
+                [errAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]];
+                [strongSelf presentViewController:errAlert animated:YES completion:nil];
+                return;
+            }
+
+            if (response.mapItems.count == 1) {
+                MKMapItem *item = response.mapItems.firstObject;
+                NSString *name = item.name ?: trimmed;
+                [strongSelf applyRouteWaypointCoordinate:item.placemark.coordinate name:name forTarget:target];
+            } else {
+                UIAlertController *chooser = [UIAlertController alertControllerWithTitle:@"Select Location"
+                                                                                 message:[NSString stringWithFormat:@"Found multiple matches for \"%@\":", trimmed]
+                                                                          preferredStyle:UIAlertControllerStyleActionSheet];
+                NSUInteger limit = MIN(response.mapItems.count, 4);
+                for (NSUInteger i = 0; i < limit; i++) {
+                    MKMapItem *item = response.mapItems[i];
+                    NSString *itemTitle = item.name ?: @"Unknown";
+                    if (item.placemark.title && ![item.placemark.title isEqualToString:itemTitle]) {
+                        itemTitle = [NSString stringWithFormat:@"%@ (%@)", itemTitle, item.placemark.title];
+                    }
+                    [chooser addAction:[UIAlertAction actionWithTitle:itemTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                        (void)action;
+                        [strongSelf applyRouteWaypointCoordinate:item.placemark.coordinate name:item.name ?: trimmed forTarget:target];
+                    }]];
+                }
+                [chooser addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+                if (chooser.popoverPresentationController) {
+                    UIView *sourceView = (target == LSRouteWaypointTargetStart) ? strongSelf.searchStartButton : strongSelf.searchDestButton;
+                    chooser.popoverPresentationController.sourceView = sourceView ?: strongSelf.view;
+                    chooser.popoverPresentationController.sourceRect = sourceView ? sourceView.bounds : strongSelf.view.bounds;
+                }
+                [strongSelf presentViewController:chooser animated:YES completion:nil];
+            }
+        });
+    }];
+}
+
+- (void)applyRouteWaypointCoordinate:(CLLocationCoordinate2D)coord name:(nullable NSString *)name forTarget:(LSRouteWaypointTarget)target {
+    if (!CLLocationCoordinate2DIsValid(coord)) return;
+
+    UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [feedback impactOccurred];
+
+    if (target == LSRouteWaypointTargetStart) {
+        self.startWaypointName = name;
+        if (!self.startAnnotation) {
+            self.startAnnotation = [[LSStartAnnotation alloc] init];
+            self.startAnnotation.title = @"Start";
+            [self.mapView addAnnotation:self.startAnnotation];
+        }
+        self.startAnnotation.coordinate = coord;
+        self.routePlacementPhase = self.destinationAnnotation ? LSRoutePlacementPhaseStart : LSRoutePlacementPhaseDestination;
+        self.mapHintLabel.text = self.destinationAnnotation ? @"  Tap Get Route Directions  " : @"  Tap map for destination  ";
+    } else {
+        self.destinationWaypointName = name;
+        if (!self.destinationAnnotation) {
+            self.destinationAnnotation = [[LSDestinationAnnotation alloc] init];
+            self.destinationAnnotation.title = @"Destination";
+            [self.mapView addAnnotation:self.destinationAnnotation];
+        }
+        self.destinationAnnotation.coordinate = coord;
+        self.routePlacementPhase = LSRoutePlacementPhaseStart;
+        self.mapHintLabel.text = self.startAnnotation ? @"  Tap Get Route Directions  " : @"  Tap map for start point  ";
+    }
+
+    self.fetchedRoute = nil;
+    if (self.routePolyline) {
+        [self.mapView removeOverlay:self.routePolyline];
+        self.routePolyline = nil;
+    }
+
+    [self ls_updateRouteWaypointLabels];
+    [self ls_updateRoutePlaybackCell];
+    [self.tableView reloadData];
+
+    if (self.startAnnotation && CLLocationCoordinate2DIsValid(self.startAnnotation.coordinate) &&
+        self.destinationAnnotation && CLLocationCoordinate2DIsValid(self.destinationAnnotation.coordinate)) {
+        [self handleGetRouteTapped];
+    } else {
+        [self.mapView setCenterCoordinate:coord animated:YES];
+    }
 }
 
 #pragma mark - LSRouteSimulatorDelegate
@@ -845,6 +1085,12 @@
 }
 
 - (void)ls_routeAnnotationDragEnded:(MKAnnotationView *)view {
+    if (view.annotation == self.startAnnotation) {
+        self.startWaypointName = nil;
+    }
+    if (view.annotation == self.destinationAnnotation) {
+        self.destinationWaypointName = nil;
+    }
     if (view.annotation == self.startAnnotation || view.annotation == self.destinationAnnotation) {
         self.fetchedRoute = nil;
         if (self.routePolyline) {

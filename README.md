@@ -19,14 +19,14 @@
 
 ---
 
-## ⚡ What's New in v1.2.2 (Stable Build)
+## ⚡ What's New in v1.2.3 (Stable Build)
 
-- **Ad-Hoc Code Signing Added**: Fixes `missing code signature` error when loading `LocationSpoofer.dylib` via `dlopen()` in LiveContainer / Sideloadly / TrollStore.
-- **3-Finger Hold Gesture Restored**: Hold three fingers anywhere on screen for 0.8s to open the menu.
-- **Drift Radius Visualization**: Live dashed purple circle shows the chosen randomized GPS fluctuation area when enabled.
-- **System Theme Sync**: (System, Light, Dark) theme switcher.
-- **Route Start Snapping**: Button at start route to pin current location.
-- **Custom Speed Decimal Pad**: Exact route speed switcher.
+- **Lightweight Waypoint Search**: Tap either Start Point or Destination (or their search icons) to search any city, landmark, address, or coordinate in Route mode.
+- **Ad-Hoc Code Signing**: Pre-signed arm64 dylib with 16KB segment alignment for LiveContainer, TrollStore, and Sideloadly compatibility.
+- **3-Finger Hold Gesture**: Hold three fingers anywhere on screen for 0.8s to open the menu.
+- **Drift Radius Visualization**: Live dashed purple circle overlay shows your randomized GPS fluctuation area directly on the map.
+- **System Theme Sync**: 3-way theme selector (System, Light, Dark) matches your iOS appearance.
+- **Route Start Snapping**: 1-tap reticle button anchors route start to your current GPS or spoof location.
 
 ---
 
