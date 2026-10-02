@@ -7,7 +7,7 @@
 <h3 align="center">Universal iOS Location Spoofer</h3>
 
 <p align="center">
-  GPS location spoofer for sideloaded iOS apps. Apple Maps integration, route simulation, and a native iOS interface. <strong>No jailbreak required.</strong>
+  GPS location spoofer for sideloaded iOS apps. Supports Life360. <strong>No jailbreak required.</strong>
 </p>
 
 <p align="center">
@@ -22,21 +22,21 @@
 
 - **Ad-Hoc Code Signing Added**: Fixes `missing code signature` error when loading `LocationSpoofer.dylib` via `dlopen()` in LiveContainer / Sideloadly / TrollStore.
 - **3-Finger Hold Gesture Restored**: Hold three fingers anywhere on screen for 0.8s to open the menu.
-- **Drift Radius Visualization**: Live dashed purple circle overlay shows your randomized GPS fluctuation area directly on the map.
-- **System Theme Sync**: 3-way theme selector (System, Light, Dark) matches your iOS appearance.
-- **Route Start Snapping**: 1-tap reticle button anchors route start to your current GPS or spoof location.
-- **Custom Speed Decimal Pad**: Clean number pad with a Done button for exact route speeds.
+- **Drift Radius Visualization**: Live dashed purple circle shows the chosen randomized GPS fluctuation area when enabled.
+- **System Theme Sync**: (System, Light, Dark) theme switcher.
+- **Route Start Snapping**: Button at start route to pin current location.
+- **Custom Speed Decimal Pad**: Exact route speed switcher.
 
 ---
 
 ## 📦 How to Install
 
-Inject `LocationSpoofer.dylib` into your target app using LiveContainer, Sideloadly, or TrollStore:
+Inject `LocationSpoofer.dylib` into your decrypted app using LiveContainer, Sideloadly, or TrollStore:
 
 ### LiveContainer (Recommended)
 1. Download `LocationSpoofer.dylib` from [Releases](https://github.com/getsentrix/LSpoof/releases/latest).
-2. Put `LocationSpoofer.dylib` into the **Tweaks** folder.
-3. Turn on the tweak for your app and launch.
+2. Make a folder in the **Tweaks** page and put `LocationSpoofer.dylib` inside of it.
+3. Set the tweak folder in the decrypted app's settings to the .dylib folder and run the app.
 
 ### Sideloadly
 1. Drag your target `.ipa` into Sideloadly.
