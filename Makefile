@@ -1,0 +1,25 @@
+ARCHS = arm64
+TARGET = iphone:clang:latest:14.0
+
+include $(THEOS)/makefiles/common.mk
+
+LIBRARY_NAME = LocationSpoofer
+
+LocationSpoofer_FILES = \
+	Source/dylib_init.m \
+	Source/LSHooking.m \
+	Source/LocationSpoofer.m \
+	Source/RouteSimulator.m \
+	Source/BookmarksManager.m \
+	Source/OverlayWindow.m \
+	Source/MapPickerViewController.m \
+	Source/MapPickerViewController+Route.m \
+	Source/MapPickerViewController+Bookmarks.m \
+	Source/PersistenceManager.m \
+	Source/LSUpdateChecker.m
+
+LocationSpoofer_CFLAGS = -fobjc-arc -Wall -Wextra -ISource
+LocationSpoofer_FRAMEWORKS = Foundation UIKit CoreLocation MapKit CoreGraphics QuartzCore
+LocationSpoofer_LDFLAGS = -install_name @rpath/LocationSpoofer.dylib -Wl,-segalign,0x4000
+
+include $(THEOS)/makefiles/library.mk

@@ -1,0 +1,103 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag'
+        required: false
+        default: 'v1.1.1'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile LocationSpoofer.dylib
+        run: |
+          xcrun --sdk iphoneos clang -target arm64-apple-ios14.0 \
+            -dynamiclib \
+            -fobjc-arc \
+            -Wall -Wextra \
+            -Wl,-segalign,0x4000 \
+            -ISource \
+            Source/dylib_init.m \
+            Source/LSHooking.m \
+            Source/LocationSpoofer.m \
+            Source/RouteSimulator.m \
+            Source/BookmarksManager.m \
+            Source/OverlayWindow.m \
+            Source/MapPickerViewController.m \
+            Source/MapPickerViewController+Route.m \
+            Source/MapPickerViewController+Bookmarks.m \
+            Source/PersistenceManager.m \
+            Source/LSUpdateChecker.m \
+            -framework Foundation \
+            -framework UIKit \
+            -framework CoreLocation \
+            -framework MapKit \
+            -framework CoreGraphics \
+            -framework QuartzCore \
+            -install_name @rpath/LocationSpoofer.dylib \
+            -o LocationSpoofer.dylib
+          codesign -s - -f LocationSpoofer.dylib
+          codesign -dvv LocationSpoofer.dylib
+          ls -lh LocationSpoofer.dylib
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocationSpoofer.dylib
+          path: LocationSpoofer.dylib
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.tag_name }}"
+          if [ -z "$TAG" ]; then
+            if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+              TAG="${GITHUB_REF#refs/tags/}"
+            else
+              TAG="v1.2.5"
+            fi
+          fi
+          echo "Using tag: $TAG"
+          cat << 'EOF' > notes.md
+          ## LSpoof+ v1.2.5 - Fix Search Resolution & Flow Animations
+
+          ### What's New
+          - **Fixed Search Nearby & Category Completions**: Selecting "Search Nearby" or category-based Apple Maps auto-suggestions now resolves accurately with natural language fallback and race-free coordinate anchoring.
+          - **Fluid Spring & Flow Animations**: Tactile spring bounce on waypoint search and snap reticle buttons, smooth slide-and-fade unfolding/folding with spring damping, dynamic camera focus, and cross-dissolve route table updates.
+          - **Unfolding Waypoint Search Bar**: Tapping the search icon on Start Point or Destination unfolds the native iOS search bar with real-time Apple Maps suggestions.
+          - **Ad-Hoc Code Signed**: Pre-signed arm64 Mach-O dylib with 16KB segment alignment for LiveContainer, TrollStore, and Sideloadly compatibility.
+          - **3-Finger Gesture**: Hold three fingers anywhere on screen for 0.8 seconds to open the menu.
+          - **Drift Radius Visualization**: Live dashed purple circle overlay shows your randomized GPS fluctuation area directly on the map.
+          - **System Theme Sync**: Inset Grouped 3-way segmented control (System, Light, Dark) matches iOS appearance dynamically.
+          - **Route Start Snapping**: Reticle viewfinder button instantly snaps route start to current GPS or spoofed location.
+
+          ### Assets
+          - `LocationSpoofer.dylib`: Ad-hoc code-signed arm64 Mach-O dynamic library for iOS 14.0+
+          EOF
+
+          gh release view "$TAG" --repo getsentrix/LSpoof-Plus >/dev/null 2>&1 && {
+            gh release upload "$TAG" LocationSpoofer.dylib --repo getsentrix/LSpoof-Plus --clobber
+          } || {
+            gh release create "$TAG" LocationSpoofer.dylib \
+              --repo getsentrix/LSpoof-Plus \
+              --title "$TAG - Search Resolution & Flow Animations" \
+              --notes-file notes.md || gh release upload "$TAG" LocationSpoofer.dylib --repo getsentrix/LSpoof-Plus --clobber
+          }
+
+
+

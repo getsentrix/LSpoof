@@ -1,0 +1,435 @@
+#import "PersistenceManager.h"
+#import <os/lock.h>
+
+// Plaintext NSUserDefaults in the host sandbox; readable by the host process and device backups.
+static NSString * const kSuiteName = @"com.locationspoofer.dylib";
+static NSString * const kKeyEnabled = @"spoof_enabled";
+static NSString * const kKeyLatitude = @"spoof_latitude";
+static NSString * const kKeyLongitude = @"spoof_longitude";
+static NSString * const kKeySimulationWasActive = @"LSSimulationWasActive";
+static NSString * const kKeyAltitude = @"LSAltitude";
+static NSString * const kKeyHeading = @"LSHeading";
+static NSString * const kKeyFluctuationEnabled = @"LSFluctuationEnabled";
+static NSString * const kKeyFluctuationRadius = @"LSFluctuationRadius";
+static NSString * const kKeyKeepLastSpoof = @"LSKeepLastSpoof";
+static NSString * const kKeyShowRealLocation = @"LSShowRealLocation";
+static NSString * const kKeyAppearancePreference = @"LSAppearancePreference";
+static NSString * const kKeyRecentLocations = @"LSRecentLocations";
+static NSString * const kRecentLatitudeKey = @"LSRecentLat";
+static NSString * const kRecentLongitudeKey = @"LSRecentLon";
+static NSString * const kRecentNameKey = @"LSRecentName";
+static NSString * const kRecentDateKey = @"LSRecentDate";
+static const NSUInteger kLSMaxRecentLocations = 5;
+
+@interface PersistenceManager () {
+    os_unfair_lock _lock;
+}
+@property (nonatomic, strong) NSUserDefaults *defaults;
+@property (nonatomic, assign) BOOL cachedEnabled;
+@property (nonatomic, assign) CLLocationCoordinate2D cachedCoordinate;
+@property (nonatomic, assign) BOOL hasCachedCoordinate;
+@property (nonatomic, assign) BOOL cachedSimulationWasActive;
+@property (nonatomic, assign) double cachedAltitude;
+@property (nonatomic, assign) CLLocationDirection cachedHeading;
+@property (nonatomic, assign) BOOL cachedFluctuationEnabled;
+@property (nonatomic, assign) double cachedFluctuationRadius;
+@property (nonatomic, assign) BOOL cachedKeepLastSpoof;
+@property (nonatomic, assign) BOOL cachedShowRealLocation;
+@property (nonatomic, assign) NSInteger cachedAppearancePreference;
+@property (nonatomic, strong) NSMutableArray<NSDictionary *> *cachedRecents;
+@property (nonatomic, assign) BOOL recentsLoaded;
+@end
+
+@implementation PersistenceManager
+
+@dynamic simulationWasActive, altitude, heading, fluctuationEnabled, fluctuationRadius, keepLastSpoof, showRealLocation, appearancePreference;
+
++ (instancetype)shared {
+    static PersistenceManager *instance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        instance = [[PersistenceManager alloc] initPrivate];
+    });
+    return instance;
+}
+
+- (instancetype)initPrivate {
+    self = [super init];
+    if (self) {
+        _lock = OS_UNFAIR_LOCK_INIT;
+        _defaults = [[NSUserDefaults alloc] initWithSuiteName:kSuiteName];
+        _cachedEnabled = NO;
+        _cachedCoordinate = kCLLocationCoordinate2DInvalid;
+        _hasCachedCoordinate = NO;
+        _cachedAltitude = 0.0;
+        _cachedHeading = 0.0;
+        _cachedFluctuationEnabled = NO;
+        _cachedFluctuationRadius = 50.0;
+        _cachedKeepLastSpoof = NO;
+        _cachedShowRealLocation = NO;
+        _cachedAppearancePreference = [_defaults integerForKey:kKeyAppearancePreference];
+        _lastRealCoordinate = kCLLocationCoordinate2DInvalid;
+        _hasRealCoordinate = NO;
+        _cachedRecents = [NSMutableArray array];
+    }
+    return self;
+}
+
+
++ (void)loadEarly {
+    PersistenceManager *manager = [PersistenceManager shared];
+    [manager reloadFromDefaults];
+}
+
+- (void)reloadRecentsLocked {
+    if (self.recentsLoaded) {
+        return;
+    }
+    NSArray *stored = [self.defaults arrayForKey:kKeyRecentLocations];
+    if ([stored isKindOfClass:[NSArray class]]) {
+        for (id entry in stored) {
+            if ([entry isKindOfClass:[NSDictionary class]]) {
+                [self.cachedRecents addObject:entry];
+            }
+        }
+    }
+    self.recentsLoaded = YES;
+}
+
+- (void)reloadFromDefaults {
+    os_unfair_lock_lock(&_lock);
+    self.cachedEnabled = [self.defaults boolForKey:kKeyEnabled];
+    self.cachedSimulationWasActive = [self.defaults boolForKey:kKeySimulationWasActive];
+    self.cachedAltitude = [self.defaults doubleForKey:kKeyAltitude];
+    self.cachedHeading = [self.defaults doubleForKey:kKeyHeading];
+    self.cachedFluctuationEnabled = [self.defaults boolForKey:kKeyFluctuationEnabled];
+    self.cachedFluctuationRadius = [self.defaults doubleForKey:kKeyFluctuationRadius];
+    self.cachedKeepLastSpoof = [self.defaults boolForKey:kKeyKeepLastSpoof];
+    self.cachedShowRealLocation = [self.defaults boolForKey:kKeyShowRealLocation];
+    if (self.cachedFluctuationRadius <= 0.0) {
+        self.cachedFluctuationRadius = 50.0;
+    }
+
+    if ([self.defaults objectForKey:kKeyLatitude] != nil &&
+        [self.defaults objectForKey:kKeyLongitude] != nil) {
+        CLLocationDegrees latitude = [self.defaults doubleForKey:kKeyLatitude];
+        CLLocationDegrees longitude = [self.defaults doubleForKey:kKeyLongitude];
+        if ([self isValidLatitude:latitude longitude:longitude]) {
+            self.cachedCoordinate = CLLocationCoordinate2DMake(latitude, longitude);
+            self.hasCachedCoordinate = YES;
+        } else {
+            self.cachedCoordinate = kCLLocationCoordinate2DInvalid;
+            self.hasCachedCoordinate = NO;
+        }
+    } else {
+        self.cachedCoordinate = kCLLocationCoordinate2DInvalid;
+        self.hasCachedCoordinate = NO;
+    }
+
+    self.recentsLoaded = NO;
+    [self.cachedRecents removeAllObjects];
+    [self reloadRecentsLocked];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (BOOL)isValidLatitude:(CLLocationDegrees)latitude longitude:(CLLocationDegrees)longitude {
+    return latitude >= -90.0 && latitude <= 90.0 &&
+           longitude >= -180.0 && longitude <= 180.0;
+}
+
+- (BOOL)isSpoofingEnabled {
+    os_unfair_lock_lock(&_lock);
+    BOOL enabled = self.cachedEnabled && self.hasCachedCoordinate;
+    os_unfair_lock_unlock(&_lock);
+    return enabled;
+}
+
+- (CLLocationCoordinate2D)spoofCoordinate {
+    os_unfair_lock_lock(&_lock);
+    if (self.hasCachedCoordinate) {
+        CLLocationCoordinate2D coord = self.cachedCoordinate;
+        os_unfair_lock_unlock(&_lock);
+        return coord;
+    }
+    os_unfair_lock_unlock(&_lock);
+    return CLLocationCoordinate2DMake(37.7749, -122.4194);
+}
+
+- (BOOL)hasStoredCoordinate {
+    os_unfair_lock_lock(&_lock);
+    BOOL stored = self.hasCachedCoordinate;
+    os_unfair_lock_unlock(&_lock);
+    return stored;
+}
+
+- (BOOL)simulationWasActive {
+    os_unfair_lock_lock(&_lock);
+    BOOL active = self.cachedSimulationWasActive;
+    os_unfair_lock_unlock(&_lock);
+    return active;
+}
+
+- (void)setSimulationWasActive:(BOOL)simulationWasActive {
+    os_unfair_lock_lock(&_lock);
+    self.cachedSimulationWasActive = simulationWasActive;
+    [self.defaults setBool:simulationWasActive forKey:kKeySimulationWasActive];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (double)altitude {
+    os_unfair_lock_lock(&_lock);
+    double alt = self.cachedAltitude;
+    os_unfair_lock_unlock(&_lock);
+    return alt;
+}
+
+- (void)setAltitude:(double)altitude {
+    os_unfair_lock_lock(&_lock);
+    self.cachedAltitude = altitude;
+    [self.defaults setDouble:altitude forKey:kKeyAltitude];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (CLLocationDirection)heading {
+    os_unfair_lock_lock(&_lock);
+    CLLocationDirection hdg = self.cachedHeading;
+    os_unfair_lock_unlock(&_lock);
+    return hdg;
+}
+
+- (void)setHeading:(CLLocationDirection)heading {
+    os_unfair_lock_lock(&_lock);
+    self.cachedHeading = heading;
+    [self.defaults setDouble:heading forKey:kKeyHeading];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (BOOL)fluctuationEnabled {
+    os_unfair_lock_lock(&_lock);
+    BOOL enabled = self.cachedFluctuationEnabled;
+    os_unfair_lock_unlock(&_lock);
+    return enabled;
+}
+
+- (void)setFluctuationEnabled:(BOOL)fluctuationEnabled {
+    os_unfair_lock_lock(&_lock);
+    self.cachedFluctuationEnabled = fluctuationEnabled;
+    [self.defaults setBool:fluctuationEnabled forKey:kKeyFluctuationEnabled];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (double)fluctuationRadius {
+    os_unfair_lock_lock(&_lock);
+    double radius = self.cachedFluctuationRadius;
+    os_unfair_lock_unlock(&_lock);
+    return radius > 0.0 ? radius : 50.0;
+}
+
+- (void)setFluctuationRadius:(double)fluctuationRadius {
+    os_unfair_lock_lock(&_lock);
+    self.cachedFluctuationRadius = fluctuationRadius > 0.0 ? fluctuationRadius : 50.0;
+    [self.defaults setDouble:self.cachedFluctuationRadius forKey:kKeyFluctuationRadius];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (BOOL)keepLastSpoof {
+    os_unfair_lock_lock(&_lock);
+    BOOL keep = self.cachedKeepLastSpoof;
+    os_unfair_lock_unlock(&_lock);
+    return keep;
+}
+
+- (void)setKeepLastSpoof:(BOOL)keepLastSpoof {
+    os_unfair_lock_lock(&_lock);
+    self.cachedKeepLastSpoof = keepLastSpoof;
+    [self.defaults setBool:keepLastSpoof forKey:kKeyKeepLastSpoof];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (BOOL)showRealLocation {
+    os_unfair_lock_lock(&_lock);
+    BOOL show = self.cachedShowRealLocation;
+    os_unfair_lock_unlock(&_lock);
+    return show;
+}
+
+- (void)setShowRealLocation:(BOOL)showRealLocation {
+    os_unfair_lock_lock(&_lock);
+    self.cachedShowRealLocation = showRealLocation;
+    [self.defaults setBool:showRealLocation forKey:kKeyShowRealLocation];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (LSAppearancePreference)appearancePreference {
+    os_unfair_lock_lock(&_lock);
+    LSAppearancePreference pref = (LSAppearancePreference)self.cachedAppearancePreference;
+    os_unfair_lock_unlock(&_lock);
+    return pref;
+}
+
+- (void)setAppearancePreference:(LSAppearancePreference)preference {
+    os_unfair_lock_lock(&_lock);
+    self.cachedAppearancePreference = preference;
+    [self.defaults setInteger:preference forKey:kKeyAppearancePreference];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (BOOL)isEffectiveDarkMode {
+    LSAppearancePreference pref = self.appearancePreference;
+    if (pref == LSAppearancePreferenceDark) return YES;
+    if (pref == LSAppearancePreferenceLight) return NO;
+    if (@available(iOS 13.0, *)) {
+        return UIScreen.mainScreen.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+    }
+    return NO;
+}
+
+- (NSArray<NSDictionary *> *)recentLocations {
+    os_unfair_lock_lock(&_lock);
+    [self reloadRecentsLocked];
+    NSArray *recents = [self.cachedRecents copy];
+    os_unfair_lock_unlock(&_lock);
+    return recents;
+}
+
+- (void)recordRecentCoordinate:(CLLocationCoordinate2D)coordinate name:(NSString *)name {
+    os_unfair_lock_lock(&_lock);
+    [self reloadRecentsLocked];
+
+    static NSISO8601DateFormatter *formatter = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        formatter = [[NSISO8601DateFormatter alloc] init];
+    });
+
+    NSString *initialName = name.length > 0 ? name : @"Resolving address...";
+    NSDictionary *entry = @{
+        kRecentLatitudeKey: @(coordinate.latitude),
+        kRecentLongitudeKey: @(coordinate.longitude),
+        kRecentNameKey: initialName,
+        kRecentDateKey: [formatter stringFromDate:[NSDate date]]
+    };
+
+    [self.cachedRecents insertObject:entry atIndex:0];
+    while (self.cachedRecents.count > kLSMaxRecentLocations) {
+        [self.cachedRecents removeLastObject];
+    }
+    [self.defaults setObject:[self.cachedRecents copy] forKey:kKeyRecentLocations];
+    os_unfair_lock_unlock(&_lock);
+
+    // If no custom name was provided, asynchronously reverse geocode to recognizable place / address
+    if (name.length == 0) {
+        CLLocation *loc = [[CLLocation alloc] initWithLatitude:coordinate.latitude longitude:coordinate.longitude];
+        CLGeocoder *geocoder = [[CLGeocoder alloc] init];
+        __weak typeof(self) weakSelf = self;
+        [geocoder reverseGeocodeLocation:loc completionHandler:^(NSArray<CLPlacemark *> *placemarks, NSError *error) {
+            if (!error && placemarks.count > 0) {
+                CLPlacemark *pm = placemarks.firstObject;
+                NSString *resolved = nil;
+                if (pm.areasOfInterest.firstObject.length > 0) {
+                    resolved = pm.areasOfInterest.firstObject;
+                } else if (pm.name.length > 0 && pm.thoroughfare.length > 0 && ![pm.name isEqualToString:pm.thoroughfare]) {
+                    resolved = pm.name;
+                } else {
+                    NSMutableArray *components = [NSMutableArray array];
+                    if (pm.subThoroughfare.length > 0 && pm.thoroughfare.length > 0) {
+                        [components addObject:[NSString stringWithFormat:@"%@ %@", pm.subThoroughfare, pm.thoroughfare]];
+                    } else if (pm.thoroughfare.length > 0) {
+                        [components addObject:pm.thoroughfare];
+                    } else if (pm.name.length > 0) {
+                        [components addObject:pm.name];
+                    }
+                    if (pm.locality.length > 0) {
+                        [components addObject:pm.locality];
+                    }
+                    if (components.count > 0) {
+                        resolved = [components componentsJoinedByString:@", "];
+                    }
+                }
+                if (resolved.length > 0) {
+                    [weakSelf updateRecentCoordinateName:resolved forCoordinate:coordinate];
+                }
+            }
+        }];
+    }
+}
+
+- (void)updateRecentCoordinateName:(NSString *)name forCoordinate:(CLLocationCoordinate2D)coordinate {
+    if (name.length == 0) return;
+    os_unfair_lock_lock(&_lock);
+    [self reloadRecentsLocked];
+    BOOL updated = NO;
+    for (NSUInteger i = 0; i < self.cachedRecents.count; i++) {
+        NSDictionary *dict = self.cachedRecents[i];
+        double lat = [dict[kRecentLatitudeKey] doubleValue];
+        double lon = [dict[kRecentLongitudeKey] doubleValue];
+        if (fabs(lat - coordinate.latitude) < 0.0001 && fabs(lon - coordinate.longitude) < 0.0001) {
+            NSMutableDictionary *m = [dict mutableCopy];
+            m[kRecentNameKey] = name;
+            self.cachedRecents[i] = [m copy];
+            updated = YES;
+            break;
+        }
+    }
+    if (updated) {
+        [self.defaults setObject:[self.cachedRecents copy] forKey:kKeyRecentLocations];
+    }
+    os_unfair_lock_unlock(&_lock);
+}
+
+
+- (BOOL)setSpoofCoordinate:(CLLocationCoordinate2D)coordinate enabled:(BOOL)enabled {
+    if (![self isValidLatitude:coordinate.latitude longitude:coordinate.longitude]) {
+        return NO;
+    }
+
+    os_unfair_lock_lock(&_lock);
+    self.cachedCoordinate = coordinate;
+    self.hasCachedCoordinate = YES;
+    self.cachedEnabled = enabled;
+
+    [self.defaults setDouble:coordinate.latitude forKey:kKeyLatitude];
+    [self.defaults setDouble:coordinate.longitude forKey:kKeyLongitude];
+    [self.defaults setBool:enabled forKey:kKeyEnabled];
+    [self.defaults setDouble:self.cachedAltitude forKey:kKeyAltitude];
+    [self.defaults setDouble:self.cachedHeading forKey:kKeyHeading];
+    [self.defaults setBool:self.cachedFluctuationEnabled forKey:kKeyFluctuationEnabled];
+    [self.defaults setDouble:self.cachedFluctuationRadius forKey:kKeyFluctuationRadius];
+    os_unfair_lock_unlock(&_lock);
+    return YES;
+}
+
+- (void)clearSpoof {
+    os_unfair_lock_lock(&_lock);
+    BOOL preserve = self.cachedKeepLastSpoof && self.hasCachedCoordinate;
+    self.cachedEnabled = NO;
+    if (!preserve) {
+        self.hasCachedCoordinate = NO;
+        self.cachedCoordinate = kCLLocationCoordinate2DInvalid;
+        [self.defaults removeObjectForKey:kKeyLatitude];
+        [self.defaults removeObjectForKey:kKeyLongitude];
+    }
+    self.cachedSimulationWasActive = NO;
+
+    [self.defaults removeObjectForKey:kKeyEnabled];
+    [self.defaults setBool:NO forKey:kKeySimulationWasActive];
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (void)clearLastSpoof {
+    os_unfair_lock_lock(&_lock);
+    self.cachedEnabled = NO;
+    self.hasCachedCoordinate = NO;
+    self.cachedCoordinate = kCLLocationCoordinate2DInvalid;
+    self.cachedSimulationWasActive = NO;
+    self.cachedKeepLastSpoof = NO;
+
+    [self.defaults removeObjectForKey:kKeyEnabled];
+    [self.defaults removeObjectForKey:kKeyLatitude];
+    [self.defaults removeObjectForKey:kKeyLongitude];
+    [self.defaults setBool:NO forKey:kKeySimulationWasActive];
+    [self.defaults setBool:NO forKey:kKeyKeepLastSpoof];
+    os_unfair_lock_unlock(&_lock);
+}
+
+@end
