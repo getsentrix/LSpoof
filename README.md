@@ -25,10 +25,7 @@
 
 ## What's New in v1.2.7
 
-- **Neumorphic Soft UI (Zero Lag)**: Dual-tone elevation highlights and diffuse soft drop shadows with pre-calculated `CALayer shadowPath` caching across every table view cell and control, bitmap rasterization (`shouldRasterize = YES`), and automatic `traitCollectionDidChange:` appearance updates across dark and light modes.
-- **Debossed Wells & Raised Embossed Surfaces**: Tactile recessed wells for coordinate inputs (`latitude`, `longitude`, `altitude`, `customSpeedField`, and search bar), paired with raised soft cards for all tweak controls.
-- **Tactile Micro-Spring Buttons**: Interactive action buttons (`Apply`, `Stop`, `Start Simulation`, `Select`) with light haptic impacts, touch drag exit restoration, and fluid spring returns (`0.62` damping).
-- **Harmonized Apple-Grade Transitions**: Cohesive spring physics across multi-detent sheet presentation (medium and large detents), selection haptic tab switching (0.35s damping 0.82 with cross-dissolve table updates), tactile drift radius step ticks with automatic overlay cleanup, waypoint search unfolding/folding, and Apple Maps pin-drop physics for placed and moved pins.
+- **Neumorphic UI**
 - **Ad-Hoc Code Signing**: Pre-signed arm64 dylib with 16kb segment alignment for LiveContainer, TrollStore, and Sideloadly compatibility.
 - **3-Finger Hold Gesture**: Hold three fingers anywhere on screen for 0.8s to open the menu.
 
@@ -36,8 +33,8 @@
 
 ## What's New in v1.2.6
 
-- **Neumorphic Soft UI Initial Design**: Dual-tone elevation highlights and diffuse soft drop shadows.
-- **Debossed Wells**: Tactile recessed wells for coordinate inputs.
+- **Neumorphic Soft UI Initial Design**
+- **Debossed Wells**
 
 ## What's New in v1.2.5
 
