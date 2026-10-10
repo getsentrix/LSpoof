@@ -35,7 +35,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         self.searchBar.hidden = NO;
     }
 
-    [UIView animateWithDuration:0.25 animations:^{
+    [UIView animateWithDuration:0.35 delay:0 usingSpringWithDamping:0.82 initialSpringVelocity:0.3 options:UIViewAnimationOptionCurveEaseOut animations:^{
         if (isLocation) {
             self.searchBarHeightConstraint.constant = 44.0;
             self.searchBarBottomConstraint.constant = 8.0;
@@ -64,11 +64,16 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         [self ls_updateTableHeaderLayout];
     }];
 
-    if (isSaved) {
-        [self.tableView reloadData];
-    } else {
-        [self updateCoordinateModeVisibility];
-    }
+    [UIView transitionWithView:self.tableView
+                      duration:0.25
+                       options:UIViewAnimationOptionTransitionCrossDissolve
+                    animations:^{
+        if (isSaved) {
+            [self.tableView reloadData];
+        } else {
+            [self updateCoordinateModeVisibility];
+        }
+    } completion:nil];
 }
 
 - (void)handlePanelTabChanged:(UISegmentedControl *)sender {
@@ -198,7 +203,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     if (!cell) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:kLSBookmarksCell];
     }
-    cell.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    [MapPickerViewController applyNeumorphicCardStyleToView:cell cornerRadius:14.0];
 
     CLLocationCoordinate2D coordinate = kCLLocationCoordinate2DInvalid;
     NSString *title = @"Location";
@@ -275,13 +280,17 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
         cell.contentConfiguration = content;
 
         UIButton *applyBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-        applyBtn.frame = CGRectMake(0, 0, 68, 30);
+        applyBtn.frame = CGRectMake(0, 0, 72, 32);
         [applyBtn setTitle:@"Select" forState:UIControlStateNormal];
         [applyBtn setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
         applyBtn.titleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightBold];
-        applyBtn.backgroundColor = UIColor.systemBlueColor;
-        applyBtn.layer.cornerRadius = 15.0;
-        applyBtn.layer.cornerCurve = kCACornerCurveContinuous;
+        [MapPickerViewController makeButtonTactileNeumorphic:applyBtn
+                                                   baseColor:UIColor.systemBlueColor
+                                              highlightColor:[UIColor colorWithWhite:1.0 alpha:0.35]
+                                                 shadowColor:[UIColor colorWithRed:0.02 green:0.25 blue:0.65 alpha:0.45]
+                                                cornerRadius:16.0];
+        [applyBtn addTarget:self action:@selector(handleButtonTouchDown:) forControlEvents:UIControlEventTouchDown];
+        [applyBtn addTarget:self action:@selector(handleButtonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
         [applyBtn addTarget:self action:@selector(ls_applyBookmarkFromButton:) forControlEvents:UIControlEventTouchUpInside];
         cell.accessoryView = applyBtn;
         cell.accessoryType = UITableViewCellAccessoryNone;

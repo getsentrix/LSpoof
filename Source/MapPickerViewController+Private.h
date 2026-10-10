@@ -159,6 +159,19 @@ typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
 
 + (UIImage *)systemImageNamedWithFallback:(NSString *)name configuration:(nullable UIImageConfiguration *)config;
 + (UIView *)iconBadgeWithSymbolName:(NSString *)symbolName backgroundColor:(UIColor *)bgColor;
++ (UIColor *)neumorphicBaseColor;
++ (UIColor *)neumorphicSurfaceColor;
++ (UIColor *)neumorphicHighlightColor;
++ (UIColor *)neumorphicShadowColor;
++ (void)applyNeumorphicCardStyleToView:(UIView *)view cornerRadius:(CGFloat)radius;
++ (void)applyDebossedWellStyleToField:(UITextField *)field;
++ (void)makeButtonTactileNeumorphic:(UIButton *)button
+                          baseColor:(UIColor *)baseColor
+                     highlightColor:(UIColor *)hiColor
+                        shadowColor:(UIColor *)shColor
+                       cornerRadius:(CGFloat)radius;
+- (void)handleButtonTouchDown:(UIButton *)sender;
+- (void)handleButtonTouchUp:(UIButton *)sender;
 - (void)refreshStatusPill;
 - (void)syncFieldsFromCoordinate;
 - (void)updateCoordinateLabel;
