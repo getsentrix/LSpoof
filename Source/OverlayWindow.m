@@ -325,10 +325,12 @@ static UIViewController *LSHostTopViewController(void) {
     if (@available(iOS 15.0, *)) {
         UISheetPresentationController *sheet = mapPicker.sheetPresentationController;
         if (sheet) {
-            sheet.detents = @[[UISheetPresentationControllerDetent largeDetent]];
+            sheet.detents = @[[UISheetPresentationControllerDetent mediumDetent], [UISheetPresentationControllerDetent largeDetent]];
+            sheet.selectedDetentIdentifier = UISheetPresentationControllerDetentIdentifierLarge;
             sheet.prefersGrabberVisible = YES;
             sheet.preferredCornerRadius = 24.0;
             sheet.widthFollowsPreferredContentSizeWhenEdgeAttached = YES;
+            sheet.prefersScrollingExpandsWhenScrolledToEdge = YES;
         }
     }
 

@@ -77,6 +77,8 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
 }
 
 - (void)handlePanelTabChanged:(UISegmentedControl *)sender {
+    UISelectionFeedbackGenerator *feedback = [[UISelectionFeedbackGenerator alloc] init];
+    [feedback selectionChanged];
     switch (sender.selectedSegmentIndex) {
         case 0:
             self.panelTab = LSMapPickerPanelTabLocation;
@@ -95,6 +97,8 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
 }
 
 - (void)handleCoordinateModeChanged:(UISegmentedControl *)sender {
+    UISelectionFeedbackGenerator *feedback = [[UISelectionFeedbackGenerator alloc] init];
+    [feedback selectionChanged];
     self.coordinateMode = (LSMapPickerCoordinateMode)sender.selectedSegmentIndex;
     [self updateCoordinateModeVisibility];
 }
@@ -290,7 +294,7 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
                                                  shadowColor:[UIColor colorWithRed:0.02 green:0.25 blue:0.65 alpha:0.45]
                                                 cornerRadius:16.0];
         [applyBtn addTarget:self action:@selector(handleButtonTouchDown:) forControlEvents:UIControlEventTouchDown];
-        [applyBtn addTarget:self action:@selector(handleButtonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+        [applyBtn addTarget:self action:@selector(handleButtonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel | UIControlEventTouchDragExit];
         [applyBtn addTarget:self action:@selector(ls_applyBookmarkFromButton:) forControlEvents:UIControlEventTouchUpInside];
         cell.accessoryView = applyBtn;
         cell.accessoryType = UITableViewCellAccessoryNone;
@@ -426,6 +430,12 @@ typedef NS_ENUM(NSInteger, LSBookmarksSection) {
     }]];
     [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
     [self presentViewController:sheet animated:YES completion:nil];
+}
+
+- (void)ls_refreshBookmarksNeumorphicStyles {
+    if (self.panelTab == LSMapPickerPanelTabSaved) {
+        [self.tableView reloadData];
+    }
 }
 
 @end

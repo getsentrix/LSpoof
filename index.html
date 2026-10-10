@@ -885,6 +885,18 @@
     .phone-screen.phone-light-theme .inset-row {
       border-bottom-color: rgba(0, 0, 0, 0.05) !important;
     }
+    .phone-screen.phone-light-theme .btn-secondary {
+      background: var(--nm-surface-light) !important;
+      color: #1c1c1e !important;
+      border-color: rgba(255, 255, 255, 0.8) !important;
+      box-shadow: var(--nm-flat-light) !important;
+    }
+    .phone-screen.phone-light-theme .btn-secondary:active {
+      box-shadow: var(--nm-pressed-light) !important;
+    }
+    .phone-screen.phone-light-theme .btn-select-bookmark {
+      box-shadow: 2px 2px 6px rgba(163, 177, 198, 0.5), -1px -1px 4px rgba(255, 255, 255, 0.9) !important;
+    }
 
     /* Feature Item Active State */
     .feature-item.active-item {
@@ -1102,7 +1114,7 @@
     <section class="hero container">
       <div class="tag-badge">
         <span class="tag-dot"></span>
-        <span>Version 1.2.6 · Stable Build · Signed for LiveContainer · 3-Finger Gesture</span>
+        <span>Version 1.2.7 · Stable Build · Signed for LiveContainer · 3-Finger Gesture</span>
       </div>
       <h1>Change Your iPhone GPS Location.</h1>
       <p class="hero-p">
@@ -1344,7 +1356,7 @@
 
               <!-- Version & Update Check Footer -->
               <div style="text-align: center; margin: 14px 0 4px;">
-                <button onclick="showToast('LSpoof+ is up to date (v1.2.6)')" style="background: none; border: none; font-size: 0.72rem; color: #8e8e93; cursor: pointer; text-decoration: underline;">LSpoof+ v1.2.6 · Check for Updates</button>
+                <button onclick="showToast('LSpoof+ is up to date (v1.2.7)')" style="background: none; border: none; font-size: 0.72rem; color: #8e8e93; cursor: pointer; text-decoration: underline;">LSpoof+ v1.2.7 · Check for Updates</button>
               </div>
 
             </div>
@@ -1563,6 +1575,9 @@
         searchEl.style.display = 'flex';
         if (routeSvg) routeSvg.style.display = 'none';
         if (pinEl) pinEl.style.display = 'block';
+        staticDiv.style.animation = 'none';
+        void staticDiv.offsetWidth;
+        staticDiv.style.animation = 'tabSpringEnter 0.35s var(--spring-apple)';
       } else if (tab === 'route') {
         btns[1].classList.add('active');
         staticDiv.style.display = 'none';
@@ -1572,14 +1587,21 @@
         searchEl.style.display = 'none';
         if (routeSvg) routeSvg.style.display = 'block';
         if (pinEl) pinEl.style.display = 'none';
+        routeDiv.style.animation = 'none';
+        void routeDiv.offsetWidth;
+        routeDiv.style.animation = 'tabSpringEnter 0.35s var(--spring-apple)';
       } else {
         btns[2].classList.add('active');
         staticDiv.style.display = 'none';
         routeDiv.style.display = 'none';
         bmarksDiv.style.display = 'block';
-        mapEl.style.display = 'none';
+        mapEl.style.display = 'block';
         searchEl.style.display = 'none';
         if (routeSvg) routeSvg.style.display = 'none';
+        if (pinEl) pinEl.style.display = 'block';
+        bmarksDiv.style.animation = 'none';
+        void bmarksDiv.offsetWidth;
+        bmarksDiv.style.animation = 'tabSpringEnter 0.35s var(--spring-apple)';
       }
     }
 
@@ -1722,7 +1744,7 @@
         }
         showToast('GPS drift radius slider active.');
       } else if (idx === 4) {
-        showToast('LSpoof+ is up to date (v1.2.6).');
+        showToast('LSpoof+ is up to date (v1.2.7).');
       }
     }
 

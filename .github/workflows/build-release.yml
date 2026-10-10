@@ -69,18 +69,18 @@ jobs:
             if [[ "${{ github.ref }}" == refs/tags/* ]]; then
               TAG="${GITHUB_REF#refs/tags/}"
             else
-              TAG="v1.2.6"
+              TAG="v1.2.7"
             fi
           fi
           echo "Using tag: $TAG"
           cat << 'EOF' > notes.md
-          ## LSpoof+ v1.2.6 - Neumorphic Soft UI & Harmonized Animations
+          ## LSpoof+ v1.2.7 - Neumorphic Soft UI & Harmonized Animations
 
           ### What's New
-          - **Neumorphic Soft UI (Zero Lag)**: Dual-tone elevation highlights and diffuse soft drop shadows with hardware-accelerated `CALayer shadowPath` caching and layer rasterization (`shouldRasterize = YES`). Delivers locked 60/120 ProMotion FPS table scrolling with zero off-screen rendering lag.
-          - **Debossed Wells & Raised Embossed Surfaces**: Tactile recessed wells for coordinate inputs (`latitude`, `longitude`, `altitude`, `customSpeedField`, and `searchTextField`), paired with raised soft cards for all tweak controls.
-          - **Tactile Micro-Spring Buttons**: Interactive action buttons (`Apply`, `Stop`, `Start Simulation`, `Select`) depress (`0.96` scale) on touch-down and spring return (`0.62` damping) on touch-up.
-          - **Harmonized Apple-Grade Transitions**: Cohesive spring physics across sheet presentation, tab switching (0.35s damping 0.82 with cross-dissolve table updates), waypoint search unfolding/folding, and realistic Apple Maps pin-drop physics.
+          - **Neumorphic Soft UI (Zero Lag)**: Dual-tone elevation highlights and diffuse soft drop shadows with hardware-accelerated `CALayer shadowPath` caching on every table view cell and control, bitmap rasterization (`shouldRasterize = YES`), and automatic `traitCollectionDidChange:` dynamic palette updates across dark and light modes.
+          - **Debossed Wells & Raised Embossed Surfaces**: Tactile recessed wells for coordinate inputs (`latitude`, `longitude`, `altitude`, `customSpeedField`, and search bar), paired with raised soft cards for all tweak controls.
+          - **Tactile Micro-Spring Buttons**: Interactive action buttons (`Apply`, `Stop`, `Start Simulation`, `Select`) with light haptic impact, touch-drag-exit cancellation, and spring return (`0.62` damping).
+          - **Harmonized Apple-Grade Transitions**: Cohesive spring physics across multi-detent sheet presentation (medium + large detents), selection haptics on tab changes, step ticks on GPS drift radius scrubbing with automatic overlay cleanup, waypoint search unfolding/folding, and Apple Maps pin-drop spring physics on newly placed and moved pins.
           - **Ad-Hoc Code Signed**: Pre-signed arm64 Mach-O dylib with 16KB segment alignment for LiveContainer, TrollStore, and Sideloadly compatibility.
           - **3-Finger Gesture**: Hold three fingers anywhere on screen for 0.8 seconds to open the menu.
 

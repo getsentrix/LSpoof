@@ -156,6 +156,7 @@ typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
 @property (nonatomic, assign) LSMapPickerPanelTab panelTab;
 @property (nonatomic, assign) LSMapPickerCoordinateMode coordinateMode;
 @property (nonatomic, assign) BOOL bookmarksEditMode;
+@property (nonatomic, readonly) UITraitCollection *traitCollection;
 
 + (UIImage *)systemImageNamedWithFallback:(NSString *)name configuration:(nullable UIImageConfiguration *)config;
 + (UIView *)iconBadgeWithSymbolName:(NSString *)symbolName backgroundColor:(UIColor *)bgColor;
@@ -164,6 +165,8 @@ typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
 + (UIColor *)neumorphicHighlightColor;
 + (UIColor *)neumorphicShadowColor;
 + (void)applyNeumorphicCardStyleToView:(UIView *)view cornerRadius:(CGFloat)radius;
++ (void)updateNeumorphicShadowPathForView:(UIView *)view cornerRadius:(CGFloat)radius;
++ (void)refreshNeumorphicStyleForView:(UIView *)view cornerRadius:(CGFloat)radius;
 + (void)applyDebossedWellStyleToField:(UITextField *)field;
 + (void)makeButtonTactileNeumorphic:(UIButton *)button
                           baseColor:(UIColor *)baseColor
@@ -172,6 +175,7 @@ typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
                        cornerRadius:(CGFloat)radius;
 - (void)handleButtonTouchDown:(UIButton *)sender;
 - (void)handleButtonTouchUp:(UIButton *)sender;
+- (void)refreshNeumorphicColors;
 - (void)refreshStatusPill;
 - (void)syncFieldsFromCoordinate;
 - (void)updateCoordinateLabel;
@@ -198,6 +202,7 @@ typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
 - (void)updateHeroStatusCell;
 - (void)handleHeroStatusSwitchToggled:(UISwitch *)sender;
 - (void)handleFluctuationRadiusSliderChanged:(UISlider *)sender;
+- (void)handleFluctuationSliderTouchEnded:(UISlider *)sender;
 - (void)handleCheckForUpdatesTapped;
 - (void)handleDarkModeToggled:(UISwitch *)sender;
 - (void)handleThemeChanged:(UISegmentedControl *)sender;
@@ -233,6 +238,7 @@ typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
 - (nullable NSString *)ls_routeTitleForHeaderInSection:(NSInteger)section;
 - (UITableViewCell *)ls_routeCellForRowAtIndexPath:(NSIndexPath *)indexPath;
 - (void)ls_routeDidSelectRowAtIndexPath:(NSIndexPath *)indexPath;
+- (void)ls_refreshRouteNeumorphicStyles;
 
 @end
 
@@ -255,6 +261,7 @@ typedef NS_ENUM(NSInteger, LSRouteWaypointTarget) {
 - (void)ls_bookmarksMoveFromIndexPath:(NSIndexPath *)source toIndexPath:(NSIndexPath *)destination;
 - (nullable UIView *)ls_bookmarksHeaderForSection:(NSInteger)section;
 - (void)ls_presentStaticMapActionSheetAtCoordinate:(CLLocationCoordinate2D)coordinate;
+- (void)ls_refreshBookmarksNeumorphicStyles;
 
 @end
 

@@ -460,13 +460,17 @@
 }
 
 - (void)ls_handleRouteMapTap:(CLLocationCoordinate2D)coordinate {
-    if (self.routePlacementPhase == LSRoutePlacementPhaseStart || !self.startAnnotation) {
+    BOOL isStart = (self.routePlacementPhase == LSRoutePlacementPhaseStart || !self.startAnnotation);
+    MKAnnotationView *bounceView = nil;
+
+    if (isStart) {
         if (!self.startAnnotation) {
             self.startAnnotation = [[LSStartAnnotation alloc] init];
             self.startAnnotation.title = @"Start";
             [self.mapView addAnnotation:self.startAnnotation];
         }
         self.startAnnotation.coordinate = coordinate;
+        bounceView = [self.mapView viewForAnnotation:self.startAnnotation];
         self.startWaypointName = nil;
         self.routePlacementPhase = LSRoutePlacementPhaseDestination;
         self.mapHintLabel.text = @"  Tap map for destination  ";
@@ -477,9 +481,19 @@
             [self.mapView addAnnotation:self.destinationAnnotation];
         }
         self.destinationAnnotation.coordinate = coordinate;
+        bounceView = [self.mapView viewForAnnotation:self.destinationAnnotation];
         self.destinationWaypointName = nil;
         self.routePlacementPhase = LSRoutePlacementPhaseStart;
         self.mapHintLabel.text = @"  Tap map to move start  ";
+    }
+
+    if (bounceView) {
+        bounceView.transform = CGAffineTransformMakeTranslation(0, -28.0);
+        bounceView.alpha = 0.5;
+        [UIView animateWithDuration:0.42 delay:0 usingSpringWithDamping:0.58 initialSpringVelocity:0.8 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            bounceView.transform = CGAffineTransformIdentity;
+            bounceView.alpha = 1.0;
+        } completion:nil];
     }
 
     self.fetchedRoute = nil;
@@ -1108,6 +1122,36 @@
         [self ls_updateRouteWaypointLabels];
         [self ls_updateRoutePlaybackCell];
         [self.tableView reloadData];
+    }
+}
+
+- (void)ls_refreshRouteNeumorphicStyles {
+    if (self.routeStartCell) [MapPickerViewController refreshNeumorphicStyleForView:self.routeStartCell cornerRadius:14.0];
+    if (self.routeDestCell) [MapPickerViewController refreshNeumorphicStyleForView:self.routeDestCell cornerRadius:14.0];
+    if (self.routeTransportCell) [MapPickerViewController refreshNeumorphicStyleForView:self.routeTransportCell cornerRadius:14.0];
+    if (self.routeCustomSpeedCell) [MapPickerViewController refreshNeumorphicStyleForView:self.routeCustomSpeedCell cornerRadius:14.0];
+    if (self.customSpeedField) [MapPickerViewController applyDebossedWellStyleToField:self.customSpeedField];
+
+    if (self.transportModeSegment) {
+        self.transportModeSegment.layer.borderColor = [MapPickerViewController neumorphicHighlightColor].CGColor;
+    }
+    if (self.getRouteButton) {
+        self.getRouteButton.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.35].CGColor;
+        self.getRouteButton.layer.shadowColor = [UIColor colorWithRed:0.02 green:0.25 blue:0.65 alpha:0.45].CGColor;
+        [MapPickerViewController updateNeumorphicShadowPathForView:self.getRouteButton cornerRadius:16.0];
+    }
+    if (self.playRouteButton) {
+        self.playRouteButton.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.35].CGColor;
+        self.playRouteButton.layer.shadowColor = [UIColor colorWithRed:0.0 green:0.40 blue:0.10 alpha:0.45].CGColor;
+        [MapPickerViewController updateNeumorphicShadowPathForView:self.playRouteButton cornerRadius:16.0];
+    }
+    if (self.pauseRouteButton) {
+        [MapPickerViewController refreshNeumorphicStyleForView:self.pauseRouteButton cornerRadius:16.0];
+    }
+    if (self.stopRouteButton) {
+        self.stopRouteButton.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.20].CGColor;
+        self.stopRouteButton.layer.shadowColor = [UIColor colorWithRed:0.65 green:0.0 blue:0.0 alpha:0.35].CGColor;
+        [MapPickerViewController updateNeumorphicShadowPathForView:self.stopRouteButton cornerRadius:16.0];
     }
 }
 

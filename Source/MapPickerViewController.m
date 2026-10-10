@@ -92,7 +92,29 @@ static const CGFloat kLSMapHeight = 220.0;
     [super viewDidLayoutSubviews];
     [self ls_updateTableHeaderLayout];
     if (self.mapContainer && self.mapContainer.bounds.size.width > 0 && self.mapContainer.bounds.size.height > 0) {
-        self.mapContainer.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:self.mapContainer.bounds cornerRadius:kLSCornerRadius].CGPath;
+        [MapPickerViewController updateNeumorphicShadowPathForView:self.mapContainer cornerRadius:kLSCornerRadius];
+    }
+    if (self.searchBar && self.searchBar.searchTextField.bounds.size.width > 0 && self.searchBar.searchTextField.bounds.size.height > 0) {
+        self.searchBar.searchTextField.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:self.searchBar.searchTextField.bounds cornerRadius:10.0].CGPath;
+    }
+    if (self.applyButton && self.applyButton.bounds.size.width > 0 && self.applyButton.bounds.size.height > 0) {
+        [MapPickerViewController updateNeumorphicShadowPathForView:self.applyButton cornerRadius:16.0];
+    }
+    if (self.stopButton && self.stopButton.bounds.size.width > 0 && self.stopButton.bounds.size.height > 0) {
+        [MapPickerViewController updateNeumorphicShadowPathForView:self.stopButton cornerRadius:14.0];
+    }
+    if (self.cancelButton && self.cancelButton.bounds.size.width > 0 && self.cancelButton.bounds.size.height > 0) {
+        [MapPickerViewController updateNeumorphicShadowPathForView:self.cancelButton cornerRadius:14.0];
+    }
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+    [super traitCollectionDidChange:previousTraitCollection];
+    if (@available(iOS 13.0, *)) {
+        if ([self.traitCollection hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
+            [self refreshNeumorphicColors];
+            [self.tableView reloadData];
+        }
     }
 }
 
@@ -221,15 +243,71 @@ static const CGFloat kLSMapHeight = 220.0;
     view.layer.borderWidth = 0.5;
     view.layer.borderColor = [self neumorphicHighlightColor].CGColor;
     view.layer.shadowColor = [self neumorphicShadowColor].CGColor;
-    view.layer.shadowOffset = CGSizeMake(2.0, 3.5);
+    view.layer.shadowOffset = CGSizeMake(2.5, 3.5);
     view.layer.shadowRadius = 6.0;
     view.layer.shadowOpacity = 1.0;
     view.layer.masksToBounds = NO;
     view.layer.shouldRasterize = YES;
     view.layer.rasterizationScale = UIScreen.mainScreen.scale;
-    if (view.bounds.size.width > 0 && view.bounds.size.height > 0) {
-        view.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:view.bounds cornerRadius:radius].CGPath;
+
+    CALayer *highlightLayer = nil;
+    if (view.layer.sublayers) {
+        for (CALayer *sub in view.layer.sublayers) {
+            if ([sub.name isEqualToString:@"LSNeumorphicHighlight"]) {
+                highlightLayer = sub;
+                break;
+            }
+        }
     }
+    if (!highlightLayer) {
+        highlightLayer = [CALayer layer];
+        highlightLayer.name = @"LSNeumorphicHighlight";
+        highlightLayer.cornerRadius = radius;
+        highlightLayer.cornerCurve = kCACornerCurveContinuous;
+        highlightLayer.shadowOffset = CGSizeMake(-2.0, -2.5);
+        highlightLayer.shadowRadius = 4.5;
+        highlightLayer.shadowOpacity = 0.85;
+        highlightLayer.masksToBounds = NO;
+        highlightLayer.backgroundColor = UIColor.clearColor.CGColor;
+        [view.layer insertSublayer:highlightLayer atIndex:0];
+    }
+    highlightLayer.shadowColor = [self neumorphicHighlightColor].CGColor;
+
+    if (view.bounds.size.width > 0 && view.bounds.size.height > 0) {
+        [self updateNeumorphicShadowPathForView:view cornerRadius:radius];
+    }
+}
+
++ (void)updateNeumorphicShadowPathForView:(UIView *)view cornerRadius:(CGFloat)radius {
+    if (!view || view.bounds.size.width <= 0 || view.bounds.size.height <= 0) return;
+    CGPathRef path = [UIBezierPath bezierPathWithRoundedRect:view.bounds cornerRadius:radius].CGPath;
+    view.layer.shadowPath = path;
+
+    if (view.layer.sublayers) {
+        for (CALayer *sub in view.layer.sublayers) {
+            if ([sub.name isEqualToString:@"LSNeumorphicHighlight"]) {
+                sub.frame = view.bounds;
+                sub.shadowPath = path;
+                break;
+            }
+        }
+    }
+}
+
++ (void)refreshNeumorphicStyleForView:(UIView *)view cornerRadius:(CGFloat)radius {
+    if (!view) return;
+    view.backgroundColor = [self neumorphicSurfaceColor];
+    view.layer.borderColor = [self neumorphicHighlightColor].CGColor;
+    view.layer.shadowColor = [self neumorphicShadowColor].CGColor;
+    if (view.layer.sublayers) {
+        for (CALayer *sub in view.layer.sublayers) {
+            if ([sub.name isEqualToString:@"LSNeumorphicHighlight"]) {
+                sub.shadowColor = [self neumorphicHighlightColor].CGColor;
+                break;
+            }
+        }
+    }
+    [self updateNeumorphicShadowPathForView:view cornerRadius:radius];
 }
 
 + (void)applyDebossedWellStyleToField:(UITextField *)field {
@@ -266,10 +344,15 @@ static const CGFloat kLSMapHeight = 220.0;
     button.layer.shadowRadius = 6.0;
     button.layer.shadowOpacity = 1.0;
     button.layer.masksToBounds = NO;
+    if (button.bounds.size.width > 0 && button.bounds.size.height > 0) {
+        button.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:button.bounds cornerRadius:radius].CGPath;
+    }
 }
 
 - (void)handleButtonTouchDown:(UIButton *)sender {
     if (!sender) return;
+    UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+    [haptic impactOccurred];
     [UIView animateWithDuration:0.10 delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
         sender.transform = CGAffineTransformMakeScale(0.96, 0.96);
         sender.layer.shadowOpacity = 0.20;
@@ -286,6 +369,56 @@ static const CGFloat kLSMapHeight = 220.0;
 
 + (UIColor *)liquidGlassCellBackgroundColor {
     return [self neumorphicSurfaceColor];
+}
+
+- (void)refreshNeumorphicColors {
+    self.view.backgroundColor = [MapPickerViewController neumorphicBaseColor];
+
+    if (self.mapContainer) {
+        [MapPickerViewController refreshNeumorphicStyleForView:self.mapContainer cornerRadius:kLSCornerRadius];
+    }
+    if (self.searchBar && self.searchBar.searchTextField) {
+        [MapPickerViewController applyDebossedWellStyleToField:self.searchBar.searchTextField];
+    }
+    if (self.panelTabSegment) {
+        self.panelTabSegment.layer.borderColor = [MapPickerViewController neumorphicHighlightColor].CGColor;
+    }
+    if (self.themeSegmentedControl) {
+        self.themeSegmentedControl.layer.borderColor = [MapPickerViewController neumorphicHighlightColor].CGColor;
+    }
+
+    if (self.heroStatusCell) [MapPickerViewController refreshNeumorphicStyleForView:self.heroStatusCell cornerRadius:16.0];
+    if (self.previewCell) [MapPickerViewController refreshNeumorphicStyleForView:self.previewCell cornerRadius:14.0];
+    if (self.latitudeCell) [MapPickerViewController refreshNeumorphicStyleForView:self.latitudeCell cornerRadius:14.0];
+    if (self.longitudeCell) [MapPickerViewController refreshNeumorphicStyleForView:self.longitudeCell cornerRadius:14.0];
+    if (self.altitudeCell) [MapPickerViewController refreshNeumorphicStyleForView:self.altitudeCell cornerRadius:14.0];
+    if (self.headingCell) [MapPickerViewController refreshNeumorphicStyleForView:self.headingCell cornerRadius:14.0];
+    if (self.fluctuationCell) [MapPickerViewController refreshNeumorphicStyleForView:self.fluctuationCell cornerRadius:14.0];
+    if (self.fluctuationRadiusCell) [MapPickerViewController refreshNeumorphicStyleForView:self.fluctuationRadiusCell cornerRadius:14.0];
+    if (self.keepLastSpoofCell) [MapPickerViewController refreshNeumorphicStyleForView:self.keepLastSpoofCell cornerRadius:14.0];
+    if (self.showRealLocationCell) [MapPickerViewController refreshNeumorphicStyleForView:self.showRealLocationCell cornerRadius:14.0];
+    if (self.themeSelectionCell) [MapPickerViewController refreshNeumorphicStyleForView:self.themeSelectionCell cornerRadius:14.0];
+
+    if (self.latitudeField) [MapPickerViewController applyDebossedWellStyleToField:self.latitudeField];
+    if (self.longitudeField) [MapPickerViewController applyDebossedWellStyleToField:self.longitudeField];
+    if (self.altitudeField) [MapPickerViewController applyDebossedWellStyleToField:self.altitudeField];
+
+    if (self.applyButton) {
+        self.applyButton.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.35].CGColor;
+        self.applyButton.layer.shadowColor = [UIColor colorWithRed:0.02 green:0.25 blue:0.65 alpha:0.45].CGColor;
+        [MapPickerViewController updateNeumorphicShadowPathForView:self.applyButton cornerRadius:16.0];
+    }
+    if (self.stopButton) {
+        self.stopButton.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.20].CGColor;
+        self.stopButton.layer.shadowColor = [UIColor colorWithRed:0.65 green:0.0 blue:0.0 alpha:0.35].CGColor;
+        [MapPickerViewController updateNeumorphicShadowPathForView:self.stopButton cornerRadius:14.0];
+    }
+    if (self.cancelButton) {
+        [MapPickerViewController refreshNeumorphicStyleForView:self.cancelButton cornerRadius:14.0];
+    }
+
+    [self ls_refreshRouteNeumorphicStyles];
+    [self ls_refreshBookmarksNeumorphicStyles];
 }
 
 #pragma mark - Interface Setup
@@ -642,6 +775,7 @@ static const CGFloat kLSMapHeight = 220.0;
     self.fluctuationRadiusSlider.maximumValue = 150.0f;
     self.fluctuationRadiusSlider.tintColor = UIColor.systemPurpleColor;
     [self.fluctuationRadiusSlider addTarget:self action:@selector(handleFluctuationRadiusSliderChanged:) forControlEvents:UIControlEventValueChanged];
+    [self.fluctuationRadiusSlider addTarget:self action:@selector(handleFluctuationSliderTouchEnded:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
 
 
     // Other switches
@@ -667,7 +801,7 @@ static const CGFloat kLSMapHeight = 220.0;
                                             cornerRadius:16.0];
     [self.applyButton addTarget:self action:@selector(handleApply) forControlEvents:UIControlEventTouchUpInside];
     [self.applyButton addTarget:self action:@selector(handleButtonTouchDown:) forControlEvents:UIControlEventTouchDown];
-    [self.applyButton addTarget:self action:@selector(handleButtonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+    [self.applyButton addTarget:self action:@selector(handleButtonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel | UIControlEventTouchDragExit];
 
     self.stopButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.stopButton.translatesAutoresizingMaskIntoConstraints = NO;
@@ -684,7 +818,7 @@ static const CGFloat kLSMapHeight = 220.0;
                                             cornerRadius:14.0];
     [self.stopButton addTarget:self action:@selector(handleStopSpoofing) forControlEvents:UIControlEventTouchUpInside];
     [self.stopButton addTarget:self action:@selector(handleButtonTouchDown:) forControlEvents:UIControlEventTouchDown];
-    [self.stopButton addTarget:self action:@selector(handleButtonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+    [self.stopButton addTarget:self action:@selector(handleButtonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel | UIControlEventTouchDragExit];
 
     self.cancelButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.cancelButton.translatesAutoresizingMaskIntoConstraints = NO;
@@ -698,7 +832,7 @@ static const CGFloat kLSMapHeight = 220.0;
                                             cornerRadius:14.0];
     [self.cancelButton addTarget:self action:@selector(handleCancel) forControlEvents:UIControlEventTouchUpInside];
     [self.cancelButton addTarget:self action:@selector(handleButtonTouchDown:) forControlEvents:UIControlEventTouchDown];
-    [self.cancelButton addTarget:self action:@selector(handleButtonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+    [self.cancelButton addTarget:self action:@selector(handleButtonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel | UIControlEventTouchDragExit];
 }
 
 - (UITextField *)ls_createInputTextFieldWithPlaceholder:(NSString *)placeholder {
@@ -1381,7 +1515,19 @@ static const CGFloat kLSMapHeight = 220.0;
 
 - (void)handleFluctuationRadiusSliderChanged:(UISlider *)sender {
     double radius = round(sender.value);
-    self.fluctuationRadiusLabel.text = [NSString stringWithFormat:@"%.0f m", radius];
+    NSString *newText = [NSString stringWithFormat:@"%.0f m", radius];
+    if (![self.fluctuationRadiusLabel.text isEqualToString:newText]) {
+        self.fluctuationRadiusLabel.text = newText;
+        if ((NSInteger)radius % 25 == 0) {
+            UISelectionFeedbackGenerator *feedback = [[UISelectionFeedbackGenerator alloc] init];
+            [feedback selectionChanged];
+        }
+    }
+    [self updateDriftRadiusOverlay];
+}
+
+- (void)handleFluctuationSliderTouchEnded:(UISlider *)sender {
+    (void)sender;
     [self updateDriftRadiusOverlay];
 }
 
@@ -1478,6 +1624,8 @@ static const CGFloat kLSMapHeight = 220.0;
 - (void)handleDarkModeToggled:(UISwitch *)sender {
     [PersistenceManager shared].appearancePreference = sender.isOn ? LSAppearancePreferenceDark : LSAppearancePreferenceLight;
     self.overrideUserInterfaceStyle = sender.isOn ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
+    [self refreshNeumorphicColors];
+    [self.tableView reloadData];
 }
 
 - (void)handleThemeChanged:(UISegmentedControl *)sender {
@@ -1497,6 +1645,8 @@ static const CGFloat kLSMapHeight = 220.0;
             self.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
         }
     }
+    [self refreshNeumorphicColors];
+    [self.tableView reloadData];
     UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
     [feedback impactOccurred];
 }
@@ -2343,6 +2493,10 @@ static const CGFloat kLSMapHeight = 220.0;
 
     cell.backgroundColor = [MapPickerViewController liquidGlassCellBackgroundColor];
     cell.contentView.backgroundColor = UIColor.clearColor;
+
+    if (cell.bounds.size.width > 0 && cell.bounds.size.height > 0) {
+        [MapPickerViewController updateNeumorphicShadowPathForView:cell cornerRadius:cell.layer.cornerRadius];
+    }
 }
 
 @end
